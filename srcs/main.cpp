@@ -1,22 +1,36 @@
-#include "ServerManager.hpp"
-#include "ClientManager.hpp"
-#include "CommandManager.hpp"
+#include "Server.hpp"
+#include "Client.hpp"
 
-int main(int ac, char **av)
+#include <iostream>
+#include <cstdlib> // For std::atoi
+#include "Server.hpp"
+
+int main(int ac, char** av)
 {
-    if (ac != 3)
-    {
-        std::cout << "Arguments are supposed to be ./ircserv <port> <password>" >> std::endl;
-        return (1);
+    // Check command-line arguments
+    if (ac != 3) {
+        std::cerr << "Usage: ./ircserv <port> <password>" << std::endl;
+        return 1;
     }
-    std::string password = argv[2];
-    SocketManager socketManager(atoi(argv[1]));
-    ClientManager clientManager;
-    CommandProcessor commandProcessor(password);
-    while (true)
-    {
-        socketManager.pollEvents();
-        clientManager.handleClients(socketManager.getActiveSockets(), commandProcessor);
+    // Parse port and password
+    int port = std::atoi(av[1]);
+    std::string password = av[2];
+
+    if (port < 1024 || port > 65535) {
+        std::cerr << "Error: Invalid port number." << std::endl;
+        return 1;
     }
-    return (0);
+
+    try {
+        // Create and initialize the server
+        Server ircServer(port, password);
+
+        // Start the server
+        ircServer.run(); // Handles the main poll loop
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
 }
