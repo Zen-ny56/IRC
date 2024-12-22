@@ -9,8 +9,9 @@
 #include <unistd.h> //-> for close()
 #include <arpa/inet.h> //-> for inet_ntoa()
 #include <poll.h>
-#include <csignal
+#include <csignal>
 #include "Client.hpp"
+#include <string.h>// For memset
 
 class Client;
 

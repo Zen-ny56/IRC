@@ -48,54 +48,43 @@ void Server::run()
 			int newClientFd = accept(serverSocket, nullptr, nullptr);
 			if (newClientFd == -1)
 			{
-                std::cerr << "Error accepting new client" << std::endl;
-                continue;
-            }
-
-            // Set the new client socket to non-blocking mode
-            setNonBlockingMode(newClientFd);
-
-            // Add the new client socket to the fds vector for polling
-            struct pollfd newClientPollfd;
-            newClientPollfd.fd = newClientFd;
-            newClientPollfd.events = POLLIN;  // Monitor for incoming data from the client
-            newClientPollfd.revents = 0;
-            fds.push_back(newClientPollfd);
-
-            std::cout << "New client connected: " << newClientFd << std::endl;
-        }
-
-        // Check for client activity (incoming data)
-        for (size_t i = 1; i < fds.size(); ++i)  // Start from index 1 as index 0 is for the server socket
-        {
-            if (fds[i].revents & POLLIN)
-            {
-                char buffer[512];
-                ssize_t bytesRead = recv(fds[i].fd, buffer, sizeof(buffer) - 1, 0);
-                if (bytesRead > 0)
-                {
-                    buffer[bytesRead] = '\0';  // Null-terminate the received data
-                    std::cout << "Received message from client " << fds[i].fd << ": " << buffer << std::endl;
-                }
-                else if (bytesRead == 0)
-                {
-                    // Client disconnected
-                    close(fds[i].fd);
-                    fds.erase(fds.begin() + i);
-                    std::cout << "Client disconnected: " << fds[i].fd << std::endl;
-                    --i;  // Adjust index after removing an element
-                }
-                else
-                {
-                    std::cerr << "Error receiving data from client " << fds[i].fd << std::endl;
-                }
+				std::cerr << "Error accepting new client" << std::endl;
+				continue;
+			}
+			// Set the new client socket to non-blocking mode
+			if (fcntl(newClientFd, F_SETFL, O_NONBLOCK) < 0)
+				throw std::runtime_error("failed to set non-blocking mode");
+			// Add the new client socket to the fds vector for polling
+			struct pollfd newClientPollfd;
+			newClientPollfd.fd = newClientFd;
+			newClientPollfd.events = POLLIN;  // Monitor for incoming data from the client
+			newClientPollfd.revents = 0;
+			fds.push_back(newClientPollfd);
+			std::cout << "New client connected: " << newClientFd << std::endl;
+		}
+		// Check for client activity (incoming data)
+		for (size_t i = 1; i < fds.size(); ++i)  // Start from index 1 as index 0 is for the server socket
+		{
+			if (fds[i].revents & POLLIN)
+			{
+				char buffer[512];
+				ssize_t bytesRead = recv(fds[i].fd, buffer, sizeof(buffer) - 1, 0);
+				if (bytesRead > 0)
+				{
+					buffer[bytesRead] = '\0';  // Null-terminate the received data
+					std::cout << "Received message from client " << fds[i].fd << ": " << buffer << std::endl;
+				}
+				else if (bytesRead == 0)
+				{
+					// Client disconnected
+					close(fds[i].fd);
+					fds.erase(fds.begin() + i);
+					std::cout << "Client disconnected: " << fds[i].fd << std::endl;
+					--i;  // Adjust index after removing an element
+				}
+    			else
+					std::cerr << "Error receiving data from client " << fds[i].fd << std::endl;
             }
         }
     }
-}
-
-void Server::setNonBlockingMode(int serverSocket)
-{
-	if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) < 0)
-		throw std::runtime_error("failed to set non-blocking mode");
 }
