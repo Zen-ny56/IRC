@@ -31,7 +31,7 @@ Server::Server(int port, std::string password)
 
 Server::~Server()
 {
-	//To be determined
+	//To be determined, close all fds and
 }
 
 void Server::run()
@@ -63,7 +63,7 @@ void Server::run()
 			std::cout << "New client connected: " << newClientFd << std::endl;
 		}
 		// Check for client activity (incoming data)
-		for (size_t i = 1; i < fds.size(); ++i)  // Start from index 1 as index 0 is for the server socket
+		for (size_t i = 1; i < fds.size(); ++i) // Start from index 1 as index 0 is for the server socket
 		{
 			if (fds[i].revents & POLLIN)
 			{
@@ -71,7 +71,7 @@ void Server::run()
 				ssize_t bytesRead = recv(fds[i].fd, buffer, sizeof(buffer) - 1, 0);
 				if (bytesRead > 0)
 				{
-					buffer[bytesRead] = '\0';  // Null-terminate the received data
+					buffer[bytesRead] = '\0';// Null-terminate the received data
 					std::cout << "Received message from client " << fds[i].fd << ": " << buffer << std::endl;
 				}
 				else if (bytesRead == 0)
@@ -80,7 +80,7 @@ void Server::run()
 					close(fds[i].fd);
 					fds.erase(fds.begin() + i);
 					std::cout << "Client disconnected: " << fds[i].fd << std::endl;
-					--i;  // Adjust index after removing an element
+					--i;// Adjust index after removing an element
 				}
     			else
 					std::cerr << "Error receiving data from client " << fds[i].fd << std::endl;

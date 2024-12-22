@@ -15,22 +15,18 @@ int main(int ac, char** av)
     // Parse port and password
     int port = std::atoi(av[1]);
     std::string password = av[2];
-
-    if (port < 1024 || port > 65535) {
+    if (port < 1024 || port > 65535)
+    {
         std::cerr << "Error: Invalid port number." << std::endl;
         return 1;
     }
-
-    try {
-        // Create and initialize the server
-        Server ircServer(port, password);
-
-        // Start the server
-        ircServer.run(); // Handles the main poll loop
+    try
+    {
+        Server ircServer(port, password); //Server intialised
+        ircServer.run(); // Server is started
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
     return 0;
 }
