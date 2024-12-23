@@ -6,6 +6,8 @@ Server::Server(int port, std::string password)
 	this->password = password;
 	//Configuring and bind server socket
 	this->serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (serverSocket < 0)
+		throw std::runtime_error("failed to create socket");
 	memset(&this->serverAddr, 0, sizeof(this->serverAddr));
     this->serverAddr.sin_family = AF_INET;
     this->serverAddr.sin_addr.s_addr = INADDR_ANY;
@@ -13,8 +15,6 @@ Server::Server(int port, std::string password)
 	int en = 1;
 	if(setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
-	if (serverSocket < 0)
-		throw std::runtime_error("failed to create socket");
 	if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) < 0)
 		throw std::runtime_error("failed to set non-blocking mode");
     if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
@@ -26,7 +26,7 @@ Server::Server(int port, std::string password)
 	serverPollFd.fd = serverSocket;
 	serverPollFd.events = POLLIN;
 	serverPollFd.revents = 0;
-	fds.push_back(serverPollFd); //Adding to the poll structure
+	this->fds.push_back(serverPollFd); //Adding to the poll structure
 }
 
 Server::~Server()
@@ -36,7 +36,7 @@ Server::~Server()
 
 void Server::run()
 {
-    while (true)
+    while (true && !g_exit_flag)
     {
 		// Poll for events on the server socket and client sockets
         int pollCount = poll(fds.data(), fds.size(), -1);  // Wait indefinitely for an event
@@ -45,7 +45,7 @@ void Server::run()
 		// Check for new incoming client connection (server socket)
 		if (fds[0].revents & POLLIN)
 		{
-			int newClientFd = accept(serverSocket, nullptr, nullptr);
+			int newClientFd = accept(serverSocket, NULL, NULL);
 			if (newClientFd == -1)
 			{
 				std::cerr << "Error accepting new client" << std::endl;
