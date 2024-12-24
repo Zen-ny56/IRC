@@ -6,10 +6,22 @@ class Client //-> class for client
 {
     private:
 	    int fd; //-> client file descriptor
-	    std::string IPadd; //-> client ip address
+	    std::string nickname;
+		std::string username;
+		std::string hostname;
+		bool 	authenticated;
     public:
-	    Client(){}; //-> default constructor
-	    int Getf(){return fd;} //-> getter for fd
-	    void SetFd(int fd){this->fd = fd;} //-> setter for fd
-	    void setIpAdd(std::string ipadd){IPadd = ipadd;} //-> setter for ipadd
+	    Client(int fd);
+		~Client();
+		
+		int getFd();
+		std::string getNickname() const;
+		std::string getUsername() const;
+		bool isAuthenticated() const;
+		// Setters
+		void setNickname(const std::string& nick);
+		void setUsername(const std::string& user);
+		void authenticate();
+		// Utility
+    	void sendMessage(const std::string& message) const;
 };

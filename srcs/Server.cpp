@@ -27,7 +27,7 @@ Server::Server(int port, std::string password)
 	serverPollFd.events = POLLIN;
 	serverPollFd.revents = 0;
 	this->fds.push_back(serverPollFd); //Adding to the poll structure
-	std::cout << fds[0].fd << std::endl;
+	// std::cout << fds[0].fd << std::endl;
 }
 
 Server::~Server()
@@ -58,10 +58,11 @@ void Server::run()
 			// Add the new client socket to the fds vector for polling
 			struct pollfd newClientPollfd;
 			newClientPollfd.fd = newClientFd;
-			newClientPollfd.events = POLLIN;  // Monitor for incoming data from the client
+			newClientPollfd.events = POLLIN; // Monitor for incoming data from the client
 			newClientPollfd.revents = 0;
 			fds.push_back(newClientPollfd);
 			std::cout << "New client connected: " << newClientFd << std::endl;
+			
 		}
 		// Check for client activity (incoming data)
 		for (size_t i = 1; i < fds.size(); ++i) // Start from index 1 as index 0 is for the server socket
