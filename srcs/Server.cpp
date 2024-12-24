@@ -27,6 +27,7 @@ Server::Server(int port, std::string password)
 	serverPollFd.events = POLLIN;
 	serverPollFd.revents = 0;
 	this->fds.push_back(serverPollFd); //Adding to the poll structure
+	std::cout << fds[0].fd << std::endl;
 }
 
 Server::~Server()
