@@ -16,7 +16,7 @@
 extern volatile sig_atomic_t g_exit_flag;
 
 class Client;
-
+class CommandProcessor;
 class Server
 {
     private:

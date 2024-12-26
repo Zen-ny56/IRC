@@ -24,4 +24,5 @@ class Client //-> class for client
 		void authenticate();
 		// Utility
     	void sendMessage(const std::string& message) const;
+		void processMessage(char buffer[]);
 };

@@ -61,8 +61,11 @@ void Server::run()
 			newClientPollfd.events = POLLIN; // Monitor for incoming data from the client
 			newClientPollfd.revents = 0;
 			fds.push_back(newClientPollfd);
+			Client newClient(newClientFd);
+			newClient.setNickname("Guest");
+			newClient.setUsername("Guest");
+			clients.push_back(newClient);
 			std::cout << "New client connected: " << newClientFd << std::endl;
-			
 		}
 		// Check for client activity (incoming data)
 		for (size_t i = 1; i < fds.size(); ++i) // Start from index 1 as index 0 is for the server socket
@@ -74,13 +77,28 @@ void Server::run()
 				if (bytesRead > 0)
 				{
 					buffer[bytesRead] = '\0';// Null-terminate the received data
+					for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+					{
+						if (it->getFd() == fds[i].fd)
+						{
+							it->processMessage(buffer);
+							break;
+						}
+					}
 					std::cout << "Received message from client " << fds[i].fd << ": " << buffer << std::endl;
 				}
 				else if (bytesRead == 0)
 				{
 					// Client disconnected
-					close(fds[i].fd);
+					for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+					{
+						// if (it->getFd() == fds[i].fd)
+						// {
+						// 	CommandProcessor.centralProcessor(buffer, fds[i]);
+						// }
+					}
 					fds.erase(fds.begin() + i);
+					close(fds[i].fd);
 					std::cout << "Client disconnected: " << fds[i].fd << std::endl;
 					--i;// Adjust index after removing an element
 				}

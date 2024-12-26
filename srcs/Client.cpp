@@ -5,9 +5,7 @@ Client::Client(int fd) : fd(fd), authenticated(false)
 {
 }
 
-Client::~Client()
-{
-    close(fd);}
+Client::~Client(){close(fd);}
 
 int Client::getFd() { return fd;}
 std::string Client::getNickname() const { return nickname; }
@@ -20,4 +18,9 @@ void Client::authenticate() { authenticated = true; }
 
 void Client::sendMessage(const std::string& message) const {
     send(fd, message.c_str(), message.size(), 0);
+}
+
+void Client::processMessage(char buffer[])
+{
+    CommandProcessor.centralProcessor(buffer, this->fd);
 }
