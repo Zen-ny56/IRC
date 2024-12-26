@@ -81,7 +81,7 @@ void Server::run()
 					{
 						if (it->getFd() == fds[i].fd)
 						{
-							it->processMessage(buffer);
+							it->processMessage(buffer, *this);
 							break;
 						}
 					}
@@ -108,3 +108,4 @@ void Server::run()
         }
     }
 }
+std::string Server::getPass(){return this->password}

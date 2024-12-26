@@ -17,6 +17,7 @@ extern volatile sig_atomic_t g_exit_flag;
 
 class Client;
 class CommandProcessor;
+
 class Server
 {
     private:
@@ -31,5 +32,6 @@ class Server
     public:
         Server(int port, std::string password);
         ~Server();
+        std::string getPass();
         void    run();
 };

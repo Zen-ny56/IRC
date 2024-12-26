@@ -20,7 +20,7 @@ void Client::sendMessage(const std::string& message) const {
     send(fd, message.c_str(), message.size(), 0);
 }
 
-void Client::processMessage(char buffer[])
+void Client::processMessage(char buffer[], Server& server)
 {
-    CommandProcessor.centralProcessor(buffer, this->fd);
+    CommandProcessor::centralProcessor(buffer, this->fd, server, *this);  // Pass 'this' (the current Client object) by reference
 }

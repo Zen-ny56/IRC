@@ -1,6 +1,12 @@
 #pragma once
 
 #include "Server.hpp"
+#include "CommandProcessor.hpp"
+#include "Channel.hpp"
+
+class CommandProcessor;
+class Channel;
+class Server;
 
 class Client //-> class for client
 {
@@ -24,5 +30,5 @@ class Client //-> class for client
 		void authenticate();
 		// Utility
     	void sendMessage(const std::string& message) const;
-		void processMessage(char buffer[]);
+		void processMessage(char buffer[], Server& server)
 };

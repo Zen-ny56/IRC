@@ -3,6 +3,7 @@
 #include "Client.hpp"
 #include "Server.hpp"
 #include "Channel.hpp"
+#include <sstream>
 
 class Channel;
 class Server;
@@ -12,7 +13,7 @@ typedef enum commands
 {
 	NICK,
 	USER,
-	JOIN,	
+	PASS,	
 };
 
 class CommandProcessor
@@ -20,6 +21,7 @@ class CommandProcessor
 	private:
 		CommandProcessor();
 		~CommandProcessor();
+		static bool authUser(char buffer[], int fd, Server& server, Client& client);
 	public:
-		void static centralProcessor(char buffer[], int fd);
+		static void centralProcessor(char buffer[], int fd, Server& server, Client& client);
 };
