@@ -33,7 +33,6 @@ int main(int ac, char** av)
 	try
 	{
 		Server ircServer(port, password); //Server intialised
-		std::cout << "Pray" << std::endl;
 		ircServer.run(); // Server is started
 	} catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;

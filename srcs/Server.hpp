@@ -36,5 +36,6 @@ class Server
         void    run();
         bool isNicknameInUse(const std::string& nickname);
         bool isNicknameCollision(const std::string& nickname);
+        void handleClient(Client& client, int a);
         void notifyClientsOfNicknameChange(Client& updatedClient, const std::string& oldNickname, const std::string& newNickname);
 };

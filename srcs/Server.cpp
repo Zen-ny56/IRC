@@ -66,47 +66,72 @@ void Server::run()
 			newClient.setUsername("Guest");
 			clients.push_back(newClient);
 			std::cout << "New client connected: " << newClientFd << std::endl;
+			// handleClient(newClient, 0);
 		}
 		// Check for client activity (incoming data)
 		for (size_t i = 1; i < fds.size(); ++i) // Start from index 1 as index 0 is for the server socket
 		{
 			if (fds[i].revents & POLLIN)
 			{
-				char buffer[512];
-				ssize_t bytesRead = recv(fds[i].fd, buffer, sizeof(buffer) - 1, 0);
-				if (bytesRead > 0)
+				for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 				{
-					buffer[bytesRead] = '\0';// Null-terminate the received data
-					for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+					if (it->getFd() == fds[i].fd)
 					{
-						if (it->getFd() == fds[i].fd)
-						{
-							it->processMessage(buffer, *this);
-							break;
-						}
+						handleClient(*it, fds[i].fd);
 					}
-					std::cout << "Received message from client " << fds[i].fd << ": " << buffer << std::endl;
 				}
-				else if (bytesRead == 0)
-				{
-					// Client disconnected
-					for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-					{
-						// if (it->getFd() == fds[i].fd)
-						// {
-						// 	CommandProcessor.centralProcessor(buffer, fds[i]);
-						// }
-					}
-					fds.erase(fds.begin() + i);
-					close(fds[i].fd);
-					std::cout << "Client disconnected: " << fds[i].fd << std::endl;
-					--i;// Adjust index after removing an element
-				}
-    			else
-					std::cerr << "Error receiving data from client " << fds[i].fd << std::endl;
             }
         }
     }
+}
+
+void	Server::handleClient(Client& client, int fd)
+{
+    // This method is responsible for handling the client's interaction in an infinite loop.
+    char buffer[512];
+    while (true)
+    {
+		if (fd != 0)
+		{	
+			ssize_t bytesRead = recv(fd, buffer, sizeof(buffer) - 1, 0);
+			if (bytesRead > 0)
+			{
+				buffer[bytesRead] = '\0';  // Null-terminate the received data
+				client.processMessage(buffer, *this);  // Process the message here
+				continue;
+			}
+			else if (bytesRead == 0)
+			{
+				std::cout << "Client " << client.getFd() << " disconnected." << std::endl;
+				break;  // Client has disconnected
+			}
+			else
+			{
+				std::cerr << "Error receiving data from client " << client.getFd() << std::endl;
+				break;  // Exit loop on error
+			}
+		}
+	}
+	// After exiting the loop, remove the client from the server
+	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
+		if (it->getFd() == client.getFd())
+		{
+			clients.erase(it);
+			break;
+		}
+	}
+    // Remove the client from the pollfd vector as well
+	for (std::vector<struct pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
+	{
+		if (it->fd == client.getFd())
+		{
+			fds.erase(it);
+			break;
+		}
+	}
+	close(client.getFd());  // Close the client connection
+	std::cout << "Client " << client.getFd() << " removed from server." << std::endl;
 }
 
 /// @brief Authentication is happening here . We are iterating through the client vector and  checking for instances such as where the nickname is repeated

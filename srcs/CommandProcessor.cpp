@@ -40,6 +40,7 @@ void	CommandProcessor::authUser(char buffer[], int fd, Server& server, Client& c
 			client.authenticate();
 			const char* successMessage = "Authentication successful.\n";
 			send(fd, successMessage, strlen(successMessage), 0);
+			return ;
 		}
 		else
 		{
@@ -52,7 +53,8 @@ void	CommandProcessor::authUser(char buffer[], int fd, Server& server, Client& c
 		if (client.isAuthenticated() == 1)
 		{
 			const char* errorMessage = "Password has not been entered yet.\n";
-			send(fd, errorMessage, strlen(errorMessage), 0);	
+			send(fd, errorMessage, strlen(errorMessage), 0);
+			return ;	
 		}
 		std::istringstream stream(buffer);
 		std::string command, nickname;
