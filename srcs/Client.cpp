@@ -24,3 +24,10 @@ void Client::processMessage(char buffer[], Server& server)
 {
     CommandProcessor::centralProcessor(buffer, this->fd, server, *this);  // Pass 'this' (the current Client object) by reference
 }
+
+bool Client::isRegistered() const
+{
+    return registered;
+}
+
+void Client::setRegistered(bool isResgistered){registered = isRegistered;}

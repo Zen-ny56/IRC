@@ -16,6 +16,7 @@ class Client //-> class for client
 		std::string username;
 		std::string hostname;
 		bool 	authenticated;
+		bool	registered;
     public:
 	    Client(int fd);
 		~Client();
@@ -24,11 +25,13 @@ class Client //-> class for client
 		std::string getNickname() const;
 		std::string getUsername() const;
 		bool isAuthenticated() const;
+		bool isRegistered() const;
 		// Setters
 		void setNickname(const std::string& nick);
 		void setUsername(const std::string& user);
 		void authenticate();
 		// Utility
     	void sendMessage(const std::string& message) const;
-		void processMessage(char buffer[], Server& server)
+		void processMessage(char buffer[], Server& server);
+		void setRegistered(bool isResgistered);
 };

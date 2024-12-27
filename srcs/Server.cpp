@@ -108,4 +108,47 @@ void Server::run()
         }
     }
 }
-std::string Server::getPass(){return this->password}
+std::string Server::getPass(){return this->password;}
+
+bool Server::isNicknameInUse(const std::string& nickname)
+{
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+		if (it->getNickname() == nickname)
+            return true; // Nickname is already in use
+    }
+    return false; // Nickname is available
+}
+
+// Check for nickname collision
+bool Server::isNicknameCollision(const std::string& nickname)
+{
+    // Reserved nicknames (example: admin, root, server)
+    static const char* reservedNicknames[] = {"admin", "root", "server"};
+    for (int i = 0; i < sizeof(reservedNicknames) / sizeof(reservedNicknames[0]); ++i)
+    {
+        if (nickname == reservedNicknames[i])
+            return true; // Nickname collides with a reserved one
+	}
+    // Count occurrences of the nickname in the client list
+    int count = 0;
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+        if (it->getNickname() == nickname)
+			 ++count;
+    }
+	return count > 1; // Collision if more than one client has this nickname
+}
+
+// Notify all clients of a nickname change
+void Server::notifyClientsOfNicknameChange(Client& updatedClient, const std::string& oldNickname, const std::string& newNickname)
+{
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
+		if (it->getFd() != updatedClient.getFd()) // Skip the client who changed the nickname
+		{
+			std::string message = ":" + oldNickname + " NICK " + newNickname + "\n";
+			send(it->getFd(), message.c_str(), message.length(), 0);
+        }
+    }
+}

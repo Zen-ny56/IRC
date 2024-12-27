@@ -34,4 +34,7 @@ class Server
         ~Server();
         std::string getPass();
         void    run();
+        bool Server::isNicknameInUse(const std::string& nickname);
+        bool Server::isNicknameCollision(const std::string& nickname);
+        void Server::notifyClientsOfNicknameChange(Client& updatedClient, const std::string& oldNickname, const std::string& newNickname);
 };
