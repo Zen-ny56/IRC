@@ -13,7 +13,7 @@ std::string CommandProcessor::joinUsernames(const std::string& username1, const 
 	return result.str();
 }
 
-bool    CommandProcessor::authUser(char buffer[], int fd, Server& server, Client& client)
+void	CommandProcessor::authUser(char buffer[], int fd, Server& server, Client& client)
 {
 	if (strncmp(buffer, "PASS", 4) == 0)
 	{
@@ -118,8 +118,7 @@ bool    CommandProcessor::authUser(char buffer[], int fd, Server& server, Client
 		}
 		std::istringstream stream(buffer);  // Create an input stream from the buffer
 		std::string command, username1, username2, username3, username4;
-		stream >> command >> username1, username2, username3, username4;
-		std::string fullUsername = joinUsernames(username1, username2, username3, username4);
+		stream >> command >> username1 >> username2 >> username3 >> username4;
 		if (username1.empty() || username2.empty() || username3.empty() || username4.empty())
     	{
         	const char* errorMessage = "461 :Not enough parameters for USER command\n";
@@ -128,7 +127,6 @@ bool    CommandProcessor::authUser(char buffer[], int fd, Server& server, Client
 		}
 		// Join the username components
 		std::string fullUsername = joinUsernames(username1, username2, username3, username4);
-
 		// Set the username and mark the client as registered
 		client.setUsername(fullUsername);
 		client.setRegistered(true);
@@ -137,4 +135,6 @@ bool    CommandProcessor::authUser(char buffer[], int fd, Server& server, Client
 
 void    CommandProcessor::centralProcessor(char buffer[], int fd, Server& server, Client& client)
 {
+	if (client.isRegistered() == false)
+		authUser(buffer, fd, server, client);
 }

@@ -30,4 +30,4 @@ bool Client::isRegistered() const
     return registered;
 }
 
-void Client::setRegistered(bool isResgistered){registered = isRegistered;}
+void Client::setRegistered(bool boolean){registered = boolean;}

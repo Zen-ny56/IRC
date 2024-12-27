@@ -108,7 +108,11 @@ void Server::run()
         }
     }
 }
+
+/// @brief Authentication is happening here . We are iterating through the client vector and  checking for instances such as where the nickname is repeated
+/// @return 
 std::string Server::getPass(){return this->password;}
+
 
 bool Server::isNicknameInUse(const std::string& nickname)
 {
@@ -125,7 +129,7 @@ bool Server::isNicknameCollision(const std::string& nickname)
 {
     // Reserved nicknames (example: admin, root, server)
     static const char* reservedNicknames[] = {"admin", "root", "server"};
-    for (int i = 0; i < sizeof(reservedNicknames) / sizeof(reservedNicknames[0]); ++i)
+    for (size_t i = 0; i < sizeof(reservedNicknames) / sizeof(reservedNicknames[0]); ++i)
     {
         if (nickname == reservedNicknames[i])
             return true; // Nickname collides with a reserved one
