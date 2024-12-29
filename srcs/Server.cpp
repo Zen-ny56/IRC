@@ -19,7 +19,7 @@ Server::Server(int port, std::string password)
 		throw std::runtime_error("failed to set non-blocking mode");
     if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
 		throw std::runtime_error("failed to bind socket to address or port");
-	if (listen(serverSocket, 10) < 0)
+	if (listen(serverSocket, SOMAXCONN) < 0)
 		throw std::runtime_error("failed to listen");
 	// Set up polling for server socket
 	struct pollfd serverPollFd;
@@ -35,6 +35,33 @@ Server::~Server()
 	//To be determined, close all fds and
 }
 
+void Server::acceptNewClient()
+{
+	//New Client and other structures created
+	Client newClient; //
+	struct sockaddr_in clientAddr;
+	struct pollfd newClientPollfd;
+
+	socklen_t clientLen = sizeof(clientAddr);
+	int newClientFd = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientLen);
+	if (newClientFd == -1)
+		std::cerr << "Error accepting new client" << std::endl;
+	if (fcntl(newClientFd, F_SETFL, O_NONBLOCK) < 0)
+		throw std::runtime_error("failed to set non-blocking mode");
+	
+	// Add the new client socket to the fds vector for polling
+	newClientPollfd.fd = newClientFd;
+	newClientPollfd.events = POLLIN; // Monitor for incoming data from the client
+	newClientPollfd.revents = 0;
+	fds.push_back(newClientPollfd);
+
+	//Add the clients' data
+	newClient.setNickname("Guest");
+	newClient.setIPAdd(inet_ntoa(clientAddr.sin_addr));
+	newClient.setUsername("Guest");
+	clients.push_back(newClient);
+}
+
 void Server::run()
 {
     while (true && !g_exit_flag)
@@ -42,96 +69,61 @@ void Server::run()
 		// Poll for events on the server socket and client sockets
         int pollCount = poll(fds.data(), fds.size(), -1);  // Wait indefinitely for an event
         if (pollCount == -1)
-           throw std::runtime_error("Waited too long");
+			throw std::runtime_error("Waited too long");
 		// Check for new incoming client connection (server socket)
-		if (fds[0].revents & POLLIN)
+		for (size_t i = 0; i < fds.size(); ++i)
 		{
-			int newClientFd = accept(serverSocket, NULL, NULL);
-			if (newClientFd == -1)
-			{
-				std::cerr << "Error accepting new client" << std::endl;
-				continue;
-			}
-			// Set the new client socket to non-blocking mode
-			if (fcntl(newClientFd, F_SETFL, O_NONBLOCK) < 0)
-				throw std::runtime_error("failed to set non-blocking mode");
-			// Add the new client socket to the fds vector for polling
-			struct pollfd newClientPollfd;
-			newClientPollfd.fd = newClientFd;
-			newClientPollfd.events = POLLIN; // Monitor for incoming data from the client
-			newClientPollfd.revents = 0;
-			fds.push_back(newClientPollfd);
-			Client newClient(newClientFd);
-			newClient.setNickname("Guest");
-			newClient.setUsername("Guest");
-			clients.push_back(newClient);
-			std::cout << "New client connected: " << newClientFd << std::endl;
-			// handleClient(newClient, 0);
+			if (fds[i].fd == this->serverSocket)
+				acceptNewClient();
+			else
+				receiveNewData(fds[i].fd);
 		}
-		// Check for client activity (incoming data)
-		for (size_t i = 1; i < fds.size(); ++i) // Start from index 1 as index 0 is for the server socket
-		{
-			if (fds[i].revents & POLLIN)
-			{
-				for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-				{
-					if (it->getFd() == fds[i].fd)
-					{
-						handleClient(*it, fds[i].fd);
-					}
-				}
-            }
-        }
-    }
+	}
 }
 
-void	Server::handleClient(Client& client, int fd)
+void	Server::receiveNewData(int clientFd)
 {
     // This method is responsible for handling the client's interaction in an infinite loop.
-    char buffer[512];
-    while (true)
-    {
-		if (fd != 0)
-		{	
-			ssize_t bytesRead = recv(fd, buffer, sizeof(buffer) - 1, 0);
-			if (bytesRead > 0)
-			{
-				buffer[bytesRead] = '\0';  // Null-terminate the received data
-				client.processMessage(buffer, *this);  // Process the message here
-				continue;
-			}
-			else if (bytesRead == 0)
-			{
-				std::cout << "Client " << client.getFd() << " disconnected." << std::endl;
-				break;  // Client has disconnected
-			}
-			else
-			{
-				std::cerr << "Error receiving data from client " << client.getFd() << std::endl;
-				break;  // Exit loop on error
-			}
-		}
-	}
-	// After exiting the loop, remove the client from the server
-	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    char buffer[1024];
+	memset(buffer, 0, sizeof(buffer)); //-> clear the buffer
+	ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
+	if (bytesRead <= 0)
 	{
-		if (it->getFd() == client.getFd())
-		{
-			clients.erase(it);
-			break;
-		}
-	}
-    // Remove the client from the pollfd vector as well
-	for (std::vector<struct pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
+		std::cerr << "Error receiving data from client " << clientFd << std::endl;
+		throw std::runtime_error("Error recieving data");
+		return ;
+	}	
+	else
 	{
-		if (it->fd == client.getFd())
-		{
-			fds.erase(it);
-			break;
-		}
+		buffer[bytesRead] = '\0';  // Null-terminate the received data
+		std::cout << "Data has been recieved" << std::endl;
 	}
-	close(client.getFd());  // Close the client connection
-	std::cout << "Client " << client.getFd() << " removed from server." << std::endl;
+}
+
+void	Server::closeFds()
+{
+	for(size_t i = 0; i < clients.size(); i++)
+	{ //-> close all the clients
+		std::cout << RED << "Client <" << clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
+		close(clients[i].GetFd());
+	}
+	if (this->serverSocketFd != -1){ //-> close the server socket
+		std::cout << RED << "Server <" << this->serverSocketFd << "> Disconnected" << WHI << std::endl;
+		close(this->serverSocketFd);
+	}
+}
+
+void Server::ClearClients(int fd)
+{ //-> clear the clients
+	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
+		if (fds[i].fd == fd)
+			{fds.erase(fds.begin() + i); break;}
+	}
+	for(size_t i = 0; i < clients.size(); i++){ //-> remove the client from the vector of clients
+		if (clients[i].GetFd() == fd)
+			{clients.erase(clients.begin() + i); break;}
+	}
+
 }
 
 /// @brief Authentication is happening here . We are iterating through the client vector and  checking for instances such as where the nickname is repeated

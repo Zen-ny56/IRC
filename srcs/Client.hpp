@@ -15,10 +15,11 @@ class Client //-> class for client
 	    std::string nickname;
 		std::string username;
 		std::string hostname;
+		std::string IPadd;// client IP address
 		bool 	authenticated;
 		bool	registered;
     public:
-	    Client(int fd);
+	    Client();
 		~Client();
 		
 		int getFd();
@@ -34,4 +35,5 @@ class Client //-> class for client
     	void sendMessage(const std::string& message) const;
 		void processMessage(char buffer[], Server& server);
 		void setRegistered(bool isResgistered);
+		void setIPAdd(const std::string& ip);
 };

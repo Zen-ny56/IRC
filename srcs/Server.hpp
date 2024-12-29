@@ -32,10 +32,14 @@ class Server
     public:
         Server(int port, std::string password);
         ~Server();
+        void closeFds(); //-> close file descriptors
+        void clearClients(int fd); //-> clear clients
         std::string getPass();
         void    run();
         bool isNicknameInUse(const std::string& nickname);
         bool isNicknameCollision(const std::string& nickname);
         void handleClient(Client& client, int a);
         void notifyClientsOfNicknameChange(Client& updatedClient, const std::string& oldNickname, const std::string& newNickname);
+        void acceptNewClient();
+        void receiveNewData(int clientFd);
 };
