@@ -100,31 +100,31 @@ void	Server::receiveNewData(int clientFd)
 	}
 }
 
-void	Server::closeFds()
-{
-	for(size_t i = 0; i < clients.size(); i++)
-	{ //-> close all the clients
-		std::cout << RED << "Client <" << clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
-		close(clients[i].GetFd());
-	}
-	if (this->serverSocketFd != -1){ //-> close the server socket
-		std::cout << RED << "Server <" << this->serverSocketFd << "> Disconnected" << WHI << std::endl;
-		close(this->serverSocketFd);
-	}
-}
+// void	Server::closeFds()
+// {
+// 	for(size_t i = 0; i < clients.size(); i++)
+// 	{ //-> close all the clients
+// 		std::cout << RED << "Client <" << clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
+// 		close(clients[i].GetFd());
+// 	}
+// 	if (this->serverSocketFd != -1){ //-> close the server socket
+// 		std::cout << RED << "Server <" << this->serverSocketFd << "> Disconnected" << WHI << std::endl;
+// 		close(this->serverSocketFd);
+// 	}
+// }
 
-void Server::ClearClients(int fd)
-{ //-> clear the clients
-	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
-		if (fds[i].fd == fd)
-			{fds.erase(fds.begin() + i); break;}
-	}
-	for(size_t i = 0; i < clients.size(); i++){ //-> remove the client from the vector of clients
-		if (clients[i].GetFd() == fd)
-			{clients.erase(clients.begin() + i); break;}
-	}
+// void Server::ClearClients(int fd)
+// { //-> clear the clients
+// 	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
+// 		if (fds[i].fd == fd)
+// 			{fds.erase(fds.begin() + i); break;}
+// 	}
+// 	for(size_t i = 0; i < clients.size(); i++){ //-> remove the client from the vector of clients
+// 		if (clients[i].GetFd() == fd)
+// 			{clients.erase(clients.begin() + i); break;}
+// 	}
 
-}
+// }
 
 /// @brief Authentication is happening here . We are iterating through the client vector and  checking for instances such as where the nickname is repeated
 /// @return 
