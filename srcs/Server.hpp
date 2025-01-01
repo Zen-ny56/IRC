@@ -42,4 +42,5 @@ class Server
         void notifyClientsOfNicknameChange(Client& updatedClient, const std::string& oldNickname, const std::string& newNickname);
         void acceptNewClient();
         void receiveNewData(int clientFd);
+        void sendPingToClients();
 };

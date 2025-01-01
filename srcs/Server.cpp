@@ -60,6 +60,7 @@ void Server::acceptNewClient()
 	newClient.setIPAdd(inet_ntoa(clientAddr.sin_addr));
 	newClient.setUsername("Guest");
 	clients.push_back(newClient);
+	std::cout << "New client connected: " << newClientFd << std::endl;
 }
 
 void Server::run()
@@ -70,14 +71,15 @@ void Server::run()
         int pollCount = poll(fds.data(), fds.size(), -1);  // Wait indefinitely for an event
         if (pollCount == -1)
 			throw std::runtime_error("Waited too long");
+		if (fds[0].revents & POLLIN)
+            acceptNewClient();
 		// Check for new incoming client connection (server socket)
-		for (size_t i = 0; i < fds.size(); ++i)
+		for (size_t i = 1; i < fds.size(); ++i)
 		{
-			if (fds[i].fd == this->serverSocket)
-				acceptNewClient();
-			else
+			if (fds[i].revents & POLLIN)
 				receiveNewData(fds[i].fd);
 		}
+		sendPingToClients();
 	}
 }
 
@@ -87,44 +89,75 @@ void	Server::receiveNewData(int clientFd)
     char buffer[1024];
 	memset(buffer, 0, sizeof(buffer)); //-> clear the buffer
 	ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
-	if (bytesRead <= 0)
-	{
-		std::cerr << "Error receiving data from client " << clientFd << std::endl;
-		throw std::runtime_error("Error recieving data");
-		return ;
-	}	
-	else
+	if (bytesRead > 0)
 	{
 		buffer[bytesRead] = '\0';  // Null-terminate the received data
-		std::cout << "Data has been recieved" << std::endl;
+		std::string receivedMessage(buffer);
+		if (receivedMessage.find("PING ") == 0) // Starts with "PING "
+		{
+			std::string token = receivedMessage.substr(5); // Extract token after "PING "
+			std::string pongMessage = "PONG " + token + "\r\n"; // Construct PONG response
+			send(clientFd, pongMessage.c_str(), pongMessage.size(), 0);
+			std::cout << "PONG sent to client " << clientFd << std::endl;
+		}
+		else
+		{
+			std::cout << "Data has been recieved from: " << clientFd << std::endl;
+		}
+	}
+	else if (bytesRead == 0)
+	{
+		clearClients(clientFd);
+		close(clientFd);
+	}
+	else
+		throw std::runtime_error("Client wasn't able to communicate");
+}
+
+void Server::sendPingToClients()
+{
+	for (size_t i = 0; i < clients.size(); ++i)
+	{
+		std::stringstream pingMessageStream;
+		pingMessageStream << "PING " << time(NULL) << "\r\n"; // Use timestamp as token
+		std::string pingMessage = pingMessageStream.str();
+		send(clients[i].getFd(), pingMessage.c_str(), pingMessage.size(), 0);
+		std::cout << "PING sent to client " << clients[i].getFd() << std::endl;
 	}
 }
 
-// void	Server::closeFds()
-// {
-// 	for(size_t i = 0; i < clients.size(); i++)
-// 	{ //-> close all the clients
-// 		std::cout << RED << "Client <" << clients[i].GetFd() << "> Disconnected" << WHI << std::endl;
-// 		close(clients[i].GetFd());
-// 	}
-// 	if (this->serverSocketFd != -1){ //-> close the server socket
-// 		std::cout << RED << "Server <" << this->serverSocketFd << "> Disconnected" << WHI << std::endl;
-// 		close(this->serverSocketFd);
-// 	}
-// }
+void	Server::closeFds()
+{
+	for (size_t i = 0; i < clients.size(); i++)
+	{ //-> close all the clients
+		std::cout << "Client <" << clients[i].getFd() << "> Disconnected" << std::endl;
+		close(clients[i].getFd());
+	}
+	if (this->serverSocket != -1){ //-> close the server socket
+		std::cout << "Server <" << this->serverSocket << "> Disconnected" << std::endl;
+		close(this->serverSocket);
+	}
+}
 
-// void Server::ClearClients(int fd)
-// { //-> clear the clients
-// 	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
-// 		if (fds[i].fd == fd)
-// 			{fds.erase(fds.begin() + i); break;}
-// 	}
-// 	for(size_t i = 0; i < clients.size(); i++){ //-> remove the client from the vector of clients
-// 		if (clients[i].GetFd() == fd)
-// 			{clients.erase(clients.begin() + i); break;}
-// 	}
-
-// }
+void Server::clearClients(int fd)
+{
+	for(size_t i = 0; i < fds.size(); i++)
+	{ //-> remove the client from the pollfd
+		if (fds[i].fd == fd)
+		{
+			fds.erase(fds.begin() + i);
+			break;
+		}
+	}
+	for(size_t i = 0; i < clients.size(); i++)
+	{ //-> remove the client from the vector of clients
+		if (clients[i].getFd() == fd)
+		{
+			clients.erase(clients.begin() + i);
+			break;
+		}
+	}
+}
 
 /// @brief Authentication is happening here . We are iterating through the client vector and  checking for instances such as where the nickname is repeated
 /// @return 

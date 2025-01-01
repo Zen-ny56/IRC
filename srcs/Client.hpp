@@ -32,7 +32,6 @@ class Client //-> class for client
 		void setUsername(const std::string& user);
 		void authenticate();
 		// Utility
-    	void sendMessage(const std::string& message) const;
 		void processMessage(char buffer[], Server& server);
 		void setRegistered(bool isResgistered);
 		void setIPAdd(const std::string& ip);

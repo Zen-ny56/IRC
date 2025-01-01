@@ -3,7 +3,7 @@
 
 Client::Client()
 {
-    this->authenticated = false;
+	this->authenticated = false;
 }
 
 Client::~Client(){close(fd);}
@@ -18,18 +18,22 @@ void Client::setUsername(const std::string& user) { username = user; }
 void Client::setIPAdd(const std::string& ip) {IPadd = ip;}
 void Client::authenticate() { authenticated = true;}
 
-void Client::sendMessage(const std::string& message) const {
-    send(fd, message.c_str(), message.size(), 0);
-}
-
 void Client::processMessage(char buffer[], Server& server)
 {
-    CommandProcessor::centralProcessor(buffer, this->fd, server, *this);  // Pass 'this' (the current Client object) by reference
+	(void)server;
+	std::string message(buffer);
+	if (message.find("PING ") == 0) // If it's a PING message
+	{
+		std::string token = message.substr(5); // Extract the token
+		std::string pongMessage = "PONG " + token + "\r\n";
+		send(fd, message.c_str(), message.size(), 0);
+		std::cout << "Responded with PONG to server: " << pongMessage << std::endl;
+	}
 }
 
 bool Client::isRegistered() const
 {
-    return registered;
+	return registered;
 }
 
 void Client::setRegistered(bool boolean){registered = boolean;}
