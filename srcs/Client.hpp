@@ -31,6 +31,7 @@ class Client //-> class for client
 		void setNickname(const std::string& nick);
 		void setUsername(const std::string& user);
 		void authenticate();
+		void setFd(int newFd);
 		// Utility
 		void processMessage(char buffer[], Server& server);
 		void setRegistered(bool isResgistered);

@@ -15,6 +15,8 @@ Server::Server(int port, std::string password)
 	int en = 1;
 	if(setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
+	if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEPORT, &en, sizeof(en)) == -1)
+		throw(std::runtime_error("failed to set option (SO_REUSEPORT) on socket"));
 	if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) < 0)
 		throw std::runtime_error("failed to set non-blocking mode");
     if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
@@ -42,10 +44,18 @@ void Server::acceptNewClient()
 	struct sockaddr_in clientAddr;
 	struct pollfd newClientPollfd;
 
+	memset(&clientAddr, 0, sizeof(clientAddr));  // Clears the structure before use
 	socklen_t clientLen = sizeof(clientAddr);
 	int newClientFd = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientLen);
 	if (newClientFd == -1)
-		std::cerr << "Error accepting new client" << std::endl;
+    {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            return; // Non-blocking mode, no connection available, just return
+        }
+        // If it's some other error, print the error and return
+        perror("Error accepting new client");
+        return;
+    }
 	if (fcntl(newClientFd, F_SETFL, O_NONBLOCK) < 0)
 		throw std::runtime_error("failed to set non-blocking mode");
 	
@@ -59,8 +69,9 @@ void Server::acceptNewClient()
 	newClient.setNickname("Guest");
 	newClient.setIPAdd(inet_ntoa(clientAddr.sin_addr));
 	newClient.setUsername("Guest");
+	// newClient.setFd(newClientFd);
 	clients.push_back(newClient);
-	std::cout << "New client connected: " << newClientFd << std::endl;
+	std::cout << "New client connected: FD=" << newClientFd << ", IP=" << inet_ntoa(clientAddr.sin_addr) << std::endl;
 }
 
 void Server::run()
@@ -98,7 +109,7 @@ void	Server::receiveNewData(int clientFd)
 			std::string token = receivedMessage.substr(5); // Extract token after "PING "
 			std::string pongMessage = "PONG " + token + "\r\n"; // Construct PONG response
 			send(clientFd, pongMessage.c_str(), pongMessage.size(), 0);
-			std::cout << "PONG sent to client " << clientFd << std::endl;
+			// std::cout << "PONG sent to client " << clientFd << std::endl;
 		}
 		else
 		{
@@ -109,6 +120,7 @@ void	Server::receiveNewData(int clientFd)
 	{
 		clearClients(clientFd);
 		close(clientFd);
+		std::cout << "Removing client fd: " << clientFd << " from poll and clients" << std::endl;
 	}
 	else
 		throw std::runtime_error("Client wasn't able to communicate");
@@ -122,7 +134,7 @@ void Server::sendPingToClients()
 		pingMessageStream << "PING " << time(NULL) << "\r\n"; // Use timestamp as token
 		std::string pingMessage = pingMessageStream.str();
 		send(clients[i].getFd(), pingMessage.c_str(), pingMessage.size(), 0);
-		std::cout << "PING sent to client " << clients[i].getFd() << std::endl;
+		// std::cout << "PING sent to client " << clients[i].getFd() << std::endl;
 	}
 }
 
@@ -141,7 +153,7 @@ void	Server::closeFds()
 
 void Server::clearClients(int fd)
 {
-	for(size_t i = 0; i < fds.size(); i++)
+	for (size_t i = 0; i < fds.size(); i++)
 	{ //-> remove the client from the pollfd
 		if (fds[i].fd == fd)
 		{
