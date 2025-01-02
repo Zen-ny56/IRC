@@ -17,7 +17,7 @@ class Client //-> class for client
 		bool 	authenticated;
 		bool	registered;
     public:
-	    Client();
+	    Client(const std::string& username, const std::string& nickname, int fd, std::string IPadd);
 		~Client();
 		
 		int getFd();
@@ -34,4 +34,5 @@ class Client //-> class for client
 		void processMessage(char buffer[], Server& server);
 		void setRegistered(bool isResgistered);
 		void setIPAdd(const std::string& ip);
+		std::string getIPAdd();
 };

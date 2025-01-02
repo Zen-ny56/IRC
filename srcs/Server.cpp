@@ -40,7 +40,6 @@ Server::~Server()
 void Server::acceptNewClient()
 {
 	//New Client and other structures created
-	Client newClient; //
 	struct sockaddr_in clientAddr;
 	struct pollfd newClientPollfd;
 
@@ -49,16 +48,11 @@ void Server::acceptNewClient()
 	int newClientFd = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientLen);
 	if (newClientFd == -1)
     {
-        if (errno == EWOULDBLOCK || errno == EAGAIN) {
-            return; // Non-blocking mode, no connection available, just return
-        }
-        // If it's some other error, print the error and return
         perror("Error accepting new client");
         return;
     }
 	if (fcntl(newClientFd, F_SETFL, O_NONBLOCK) < 0)
 		throw std::runtime_error("failed to set non-blocking mode");
-	
 	// Add the new client socket to the fds vector for polling
 	newClientPollfd.fd = newClientFd;
 	newClientPollfd.events = POLLIN; // Monitor for incoming data from the client
@@ -66,12 +60,11 @@ void Server::acceptNewClient()
 	fds.push_back(newClientPollfd);
 
 	//Add the clients' data
-	newClient.setNickname("Guest");
-	newClient.setIPAdd(inet_ntoa(clientAddr.sin_addr));
-	newClient.setUsername("Guest");
-	newClient.setFd(newClientFd);
+	Client newClient("Guest", "Guest", newClientFd, inet_ntoa(clientAddr.sin_addr)); //
 	clients.push_back(newClient);
-	std::cout << "New client connected: FD=" << newClientFd << ", IP=" << inet_ntoa(clientAddr.sin_addr) << std::endl;
+	std::cout << "Client successfully connects to server" << std::endl;
+	if (fcntl(clients[0].getFd(), F_GETFD) == -1)
+    		perror("Invalid file descriptor");
 }
 
 void Server::run()
@@ -80,15 +73,16 @@ void Server::run()
     {
 		// Poll for events on the server socket and client sockets
         int pollCount = poll(fds.data(), fds.size(), -1);  // Wait indefinitely for an event
+		// std::cout << fds.size() << std::endl;
         if (pollCount == -1)
 			throw std::runtime_error("Waited too long");
 		if (fds[0].revents & POLLIN)
-            acceptNewClient();
+			acceptNewClient();
 		// Check for new incoming client connection (server socket)
 		for (size_t i = 1; i < fds.size(); ++i)
 		{
 			if (fds[i].revents & POLLIN)
-				receiveNewData(fds[i].fd);
+				receiveNewData(fds[i].fd);  
 		}
 		sendPingToClients();
 	}
@@ -130,11 +124,15 @@ void Server::sendPingToClients()
 {
 	for (size_t i = 0; i < clients.size(); ++i)
 	{
-		if (fcntl(clients[i].getFd(), F_GETFD) == -1)
-    		perror("Invalid file descriptor");
+		// if (fcntl(clients[i].getFd(), F_GETFD) == -1)
+		// {
+		// 	perror("Invalid file descriptor");
+		// 	continue;
+		// }
 		std::stringstream pingMessageStream;
 		pingMessageStream << "PING " << time(NULL) << "\r\n"; // Use timestamp as token
 		std::string pingMessage = pingMessageStream.str();
+		std::cout << pingMessage << std::endl;
 		if (send(clients[i].getFd(), pingMessage.c_str(), pingMessage.size(), 0) == -1)
 		{
 			perror("Error sending PING to client");
