@@ -5,7 +5,7 @@ FLAGS	= -Wall -Wextra -Werror -std=c++98
 RM		= rm -rf
 
 OBJDIR = obj
-SRC 	  = main.cpp Server.cpp Client.cpp CommandProcessor.cpp
+SRC 	  = main.cpp Server.cpp Client.cpp
 OBJ_FILES = $(addprefix $(OBJDIR)/, $(SRC:.cpp=.o))
 
 $(OBJDIR)/%.o: %.cpp

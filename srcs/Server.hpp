@@ -10,13 +10,14 @@
 #include <arpa/inet.h> //-> for inet_ntoa()
 #include <poll.h>
 #include <csignal>
+#include <sstream>
+#include <ctime>   // For the time() function
 #include "Client.hpp"
 #include <string.h>// For memset
 
 extern volatile sig_atomic_t g_exit_flag;
 
 class Client;
-class CommandProcessor;
 
 class Server
 {

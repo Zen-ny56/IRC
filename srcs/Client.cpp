@@ -8,7 +8,7 @@ Client::Client()
 
 Client::~Client(){close(fd);}
 
-int Client::getFd() { return fd;}
+int Client::getFd() { return this->fd;}
 std::string Client::getNickname() const { return nickname; }
 std::string Client::getUsername() const { return username; }
 bool Client::isAuthenticated() const { return authenticated; }

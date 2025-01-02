@@ -13,7 +13,7 @@ Server::Server(int port, std::string password)
     this->serverAddr.sin_addr.s_addr = INADDR_ANY;
     this->serverAddr.sin_port = htons(port);
 	int en = 1;
-	if(setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
+	if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("faild to set option (SO_REUSEADDR) on socket"));
 	if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEPORT, &en, sizeof(en)) == -1)
 		throw(std::runtime_error("failed to set option (SO_REUSEPORT) on socket"));
@@ -69,7 +69,7 @@ void Server::acceptNewClient()
 	newClient.setNickname("Guest");
 	newClient.setIPAdd(inet_ntoa(clientAddr.sin_addr));
 	newClient.setUsername("Guest");
-	// newClient.setFd(newClientFd);
+	newClient.setFd(newClientFd);
 	clients.push_back(newClient);
 	std::cout << "New client connected: FD=" << newClientFd << ", IP=" << inet_ntoa(clientAddr.sin_addr) << std::endl;
 }
@@ -130,10 +130,17 @@ void Server::sendPingToClients()
 {
 	for (size_t i = 0; i < clients.size(); ++i)
 	{
+		if (fcntl(clients[i].getFd(), F_GETFD) == -1)
+    		perror("Invalid file descriptor");
 		std::stringstream pingMessageStream;
 		pingMessageStream << "PING " << time(NULL) << "\r\n"; // Use timestamp as token
 		std::string pingMessage = pingMessageStream.str();
-		send(clients[i].getFd(), pingMessage.c_str(), pingMessage.size(), 0);
+		if (send(clients[i].getFd(), pingMessage.c_str(), pingMessage.size(), 0) == -1)
+		{
+			perror("Error sending PING to client");
+			std::cerr << "Error code: " << errno << std::endl;
+			clearClients(clients[i].getFd());
+		}
 		// std::cout << "PING sent to client " << clients[i].getFd() << std::endl;
 	}
 }

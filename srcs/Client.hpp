@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Server.hpp"
-#include "CommandProcessor.hpp"
 #include "Channel.hpp"
 
-class CommandProcessor;
 class Channel;
 class Server;
 
