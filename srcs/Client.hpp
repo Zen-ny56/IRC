@@ -14,4 +14,5 @@ public:
 	void setNickname(std::string nickName);
 	void setFd(int fd); //-> setter for fd
 	void setIpAdd(std::string ipadd);//-> setter for ipadd
+	std::string getNickname();
 };

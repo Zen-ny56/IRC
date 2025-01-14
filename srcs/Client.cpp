@@ -9,3 +9,5 @@ void Client::setFd(int fd){this->fd = fd;}
 void Client::setIpAdd(std::string IPadd){this->IPadd = IPadd;}
 
 void Client::setNickname(std::string nickName){this->nickName = nickName;}
+
+std::string Client::getNickname(){return this->nickName;}

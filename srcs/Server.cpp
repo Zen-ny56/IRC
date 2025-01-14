@@ -53,6 +53,7 @@ void Server::receiveNewData(int fd)
 			sendCapabilities(fd);
 		else if (message.rfind("PASS ", 0) == 0)
 		{
+			// std::cout << message << std::endl;
 			if (!validatePassword(fd, message))
 				close(fd);
 		} else if ((message.rfind("NICK ", 0) == 0) || (message.rfind("USER ", 0) == 0))
@@ -165,8 +166,15 @@ bool Server::validatePassword(int fd, const std::string& message)
 	if (message.rfind("PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
 		std::string receivedPassword = message.substr(5); // Extract password
-		if (receivedPassword == this->password)
+		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
+		// std::cout << receivedPassword << std::endl;
+		// std::cout << this->password << std::endl;
+		if (receivedPassword.compare(this->password) == 0)
+		{
+			// std::cout << "Do we enter here" << std::endl;
+			// send(fd, "Password accepted\r\n", 24, 0);
 			return true; // Authentication successful
+		}
 		send(fd, "ERROR :Invalid password\r\n", 24, 0);
 	}
 	return false; // Authentication failed
@@ -180,6 +188,7 @@ void Server::processNickUser(int fd, const std::string& message)
 		std::string nickname = message.substr(5); // Extract nickname
         Client& client = getClient(fd);  // Get the client using the fd
         client.setNickname(nickname);
+		std::cout << client.getNickname() << std::endl;
 	} else if (message.rfind("USER ", 0) == 0) { // USER command
         // Process user information (e.g., username, hostname, etc.)
         std::cout << "Received USER command: " << message << std::endl;
