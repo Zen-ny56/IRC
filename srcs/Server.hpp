@@ -22,18 +22,26 @@ class Client;
 class Server //-> class for server
 {
     private:
-        int port; //-> server port
         int serSocketFd; //-> server socket file descriptor
         static bool signal; //-> static boolean for signal
+        int port; //-> server port
+        std::string password;
         std::vector<Client> clients; //-> vector of clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
     public:
-        Server(){serSocketFd = -1;} //-> default constructor
-        void serverInit(); //-> server initialization
+        Server(); //-> default constructor
+        void serverInit(int port, std::string pass); //-> server initialization
         void serSocket(); //-> server socket creation
         void acceptNewClient(); //-> accept new client
         void receiveNewData(int fd); //-> receive new data from a registered client
         static void signalHandler(int signum); //-> signal handler
         void closeFds(); //-> close file descriptors
         void clearClients(int fd); //-> clear clients
+        void sendCapabilities(int fd);
+        void processCapReq(int fd, const std::string& message);
+        bool validatePassword(int fd, const std::string& message);
+        void processNickUser(int fd, const std::string& message);
+        void processSasl(int fd, const std::string& message);
+        void capEnd(int fd);
+        Client& getClient(int fd);
 };

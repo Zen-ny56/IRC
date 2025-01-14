@@ -1,5 +1,7 @@
 #include "Server.hpp"
 
+Server::Server(){serSocketFd = -1;}
+
 void Server::clearClients(int fd){ //-> clear the clients
 	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
 		if (fds[i].fd == fd)
@@ -38,16 +40,31 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1 , 0); //-> receive the data
-	if(bytes <= 0){ //-> check if the client disconnected
+	if(bytes <= 0)
+	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
 		clearClients(fd); //-> clear the client
 		close(fd); //-> close the client socket
-	}
-
-	else{ //-> print the received data
+	} else 
+	{ //-> print the received data
 		buff[bytes] = '\0';
-		std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
-		//here you can add your code to process the received data: parse, check, authenticate, handle the command, etc...
+		std::string message(buff);
+		if (message.find("CAP LS") != std::string::npos)
+			sendCapabilities(fd);
+		else if (message.rfind("PASS ", 0) == 0)
+		{
+			if (!validatePassword(fd, message))
+				close(fd);
+		} else if ((message.rfind("NICK ", 0) == 0) || (message.rfind("USER ", 0) == 0))
+			processNickUser(fd, message);
+		else if (message.find("CAP REQ") != std::string::npos)
+			processCapReq(fd, message);
+		else if (message.find("AUTHENTICATE") != std::string::npos)
+			processSasl(fd, message);
+		else if (message.find("CAP END") != std::string::npos)
+			capEnd(fd);
+		else
+			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 	}
 }
 
@@ -103,9 +120,10 @@ void Server::serSocket()
 	fds.push_back(newPoll); //-> add the server socket to the pollfd
 }
 
-void Server::serverInit()
+void Server::serverInit(int port, std::string pass)
 {
-	this->port = 4444;
+	this->port = port;
+	this->password = pass;
 	serSocket(); //-> create the server socket
 
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
@@ -126,4 +144,75 @@ void Server::serverInit()
 		}
 	}
 	closeFds(); //-> close the file descriptors when the server stops
+}
+
+void Server::sendCapabilities(int fd)
+{
+	std::string capMessage = "CAP * LS :multi-prefix sasl\r\n";
+	send(fd, capMessage.c_str(), capMessage.size(), 0);
+}
+
+void Server::processCapReq(int fd, const std::string& message)
+{
+	if (message.find("CAP REQ") != std::string::npos){
+		std::string capAck = "CAP * ACK :multi-prefix sasl\r\n";
+		send(fd, capAck.c_str(), capAck.size(), 0);
+	}
+}
+
+bool Server::validatePassword(int fd, const std::string& message)
+{
+	if (message.rfind("PASS", 0) == 0)
+	{ // Check if message starts with "PASS"
+		std::string receivedPassword = message.substr(5); // Extract password
+		if (receivedPassword == this->password)
+			return true; // Authentication successful
+		send(fd, "ERROR :Invalid password\r\n", 24, 0);
+	}
+	return false; // Authentication failed
+}
+
+void Server::processNickUser(int fd, const std::string& message)
+{
+	// NICK command
+	if (message.rfind("NICK ", 0) == 0)
+	{
+		std::string nickname = message.substr(5); // Extract nickname
+        Client& client = getClient(fd);  // Get the client using the fd
+        client.setNickname(nickname);
+	} else if (message.rfind("USER ", 0) == 0) { // USER command
+        // Process user information (e.g., username, hostname, etc.)
+        std::cout << "Received USER command: " << message << std::endl;
+    }
+}
+
+void Server::processSasl(int fd, const std::string& message)
+{
+	if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
+	{
+		std::string response = "AUTHENTICATE +\r\n";
+		send(fd, response.c_str(), response.size(), 0);
+    } else if (message.find("AUTHENTICATE ") == 0) {
+		// Decode and validate credentials
+		std::string credentials = message.substr(13); // Base64-encoded
+		// Decode and verify (requires base64 decoding)
+		// Example: Validate "username\0username\0password"
+		send(fd, "900 :Authentication successful\r\n", 33, 0);
+	}
+}
+
+void Server::capEnd(int fd)
+{
+	std::string capEnd = "CAP END\r\n";
+	send(fd, capEnd.c_str(), capEnd.size(), 0);
+}
+
+Client& Server::getClient(int fd)
+{
+	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
+		if (it->getFd() == fd)
+			return *it;
+	}
+	throw std::runtime_error("Client not found");
 }
