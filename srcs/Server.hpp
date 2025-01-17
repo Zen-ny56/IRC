@@ -30,6 +30,7 @@ class Server //-> class for server
         std::vector<Client> clients; //-> vector of clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<int, bool> authenticatedClients;
+        std::map<std::string, int> nicknameMap;
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization
@@ -45,6 +46,7 @@ class Server //-> class for server
         void validatePassword(int fd, const std::string& message);
         void processNickUser(int fd, const std::string& message);
         void processSasl(int fd, const std::string& message);
+        bool isValidNickname(const std::string& nickname);
         void capEnd(int fd);
         Client& getClient(int fd);
 };

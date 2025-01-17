@@ -170,7 +170,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		// std::cout << GRE << "-" << receivedPassword << "-" << std::endl;
 		if (authenticatedClients[fd] == true)
 		{
-			send(fd, "Client has already been authenticated\r\n", 40, 0);
+			send(fd, "462 PASS: You may not register\r\n", 33, 0);
 			return ;
 		}
 		if (receivedPassword.empty())
@@ -185,7 +185,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		} 
 		else
         {
-			send(fd, "464 :Password mismatch\r\n", 26, 0); // ERR_PASSWDMISMATCH
+			send(fd, "464 :Password incorrect\r\n", 26, 0); // ERR_PASSWDMISMATCH
 			return ;
         }
 	}
@@ -200,12 +200,40 @@ void Server::processNickUser(int fd, const std::string& message)
 	if (message.rfind("NICK ", 0) == 0)
 	{
 		std::string nickname = message.substr(5); // Extract nickname
-        Client& client = getClient(fd);  // Get the client using the fd
-        client.setNickname(nickname);
-		std::cout << client.getNickname() << std::endl;
-	} else if (message.rfind("USER ", 0) == 0) { // USER command
-        // Process user information (e.g., username, hostname, etc.)
-        std::cout << "Received USER command: " << message << std::endl;
+		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
+		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
+		if (nickname.empty())
+		{
+            send(fd, "431 :No nickname given\r\n", 24, 0); // ERR_NONICKNAMEGIVEN
+			return;
+		}
+		if (!isValidNickname(nickname))
+		{
+            std::string errorMsg = "432 " + nickname + " :Erroneous nickname\r\n"; // ERR_ERRONEUSNICKNAME
+			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+			return;
+		}
+		if (nicknameMap.find(nickname) != nicknameMap.end())
+		{
+ 			std::string errorMsg = "433 " + nickname + " :Nickname is already in use\r\n"; // ERR_NICKNAMEINUSE
+			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+			return;
+		}
+		// Update client's nickname
+		Client& client = getClient(fd);
+		std::string oldNickname = client.getNickname();
+		if (!oldNickname.empty())
+			nicknameMap.erase(oldNickname); // Remove old nickname from the map
+		client.setNickname(nickname);
+		nicknameMap[nickname] = fd; // Add the new nickname to the map
+		std::string response = ":" + oldNickname + " NICK " + nickname + "\r\n"; // Inform the client of the nickname change
+		send(fd, response.c_str(), response.length(), 0);
+		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
+	}
+	else if (message.rfind("USER ", 0) == 0)
+	{
+		std::cout << "Received USER command: " << message << std::endl;
+        // Further processing for USER command can be added here
     }
 }
 
@@ -243,4 +271,26 @@ Client& Server::getClient(int fd)
 void Server::markPasswordAccepted(int fd)
 {
     authenticatedClients[fd] = true;
+}
+
+bool Server::isValidNickname(const std::string& nickname)
+{
+	// Ensure the nickname is not too long or too short
+	if (nickname.length() < 1 || nickname.length() > 30) // Adjust max length as per your protocol
+		return false;
+    // Ensure the first character is not a digit, space, colon, or special character
+	char firstChar = nickname[0];
+	if (!std::isalpha(firstChar) && firstChar != '[' && firstChar != '{' &&
+		firstChar != ']' && firstChar != '}' && firstChar != '\\' &&
+		firstChar != '|')
+		return false;
+	// Ensure no invalid characters are in the nickname
+	for (std::string::const_iterator it = nickname.begin(); it != nickname.end(); ++it)
+	{
+		char c = *it;
+		if (!(std::isalnum(c) || c == '[' || c == ']' || c == '{' || c == '}' ||
+			c == '\\' || c == '|'))
+			return false;
+	}
+	return true;
 }
