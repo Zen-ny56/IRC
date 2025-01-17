@@ -52,11 +52,8 @@ void Server::receiveNewData(int fd)
 		if (message.find("CAP LS") != std::string::npos)
 			sendCapabilities(fd);
 		else if (message.rfind("PASS ", 0) == 0)
-		{
-			// std::cout << message << std::endl;
-			if (!validatePassword(fd, message))
-				close(fd);
-		} else if ((message.rfind("NICK ", 0) == 0) || (message.rfind("USER ", 0) == 0))
+			validatePassword(fd, message);
+		else if ((message.rfind("NICK ", 0) == 0) || (message.rfind("USER ", 0) == 0))
 			processNickUser(fd, message);
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
@@ -92,6 +89,7 @@ void Server::acceptNewClient()
 	clients.push_back(cli); //-> add the client to the vector of clients
 	fds.push_back(newPoll); //-> add the client socket to the pollfd
 
+	authenticatedClients[incofd] = false;
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
 
@@ -161,23 +159,39 @@ void Server::processCapReq(int fd, const std::string& message)
 	}
 }
 
-bool Server::validatePassword(int fd, const std::string& message)
+void Server::validatePassword(int fd, const std::string& message)
 {
 	if (message.rfind("PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
 		std::string receivedPassword = message.substr(5); // Extract password
+		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
-		// std::cout << receivedPassword << std::endl;
-		// std::cout << this->password << std::endl;
+		// std::cout << RED <<  "-" << this->password << "-" << std::endl;
+		// std::cout << GRE << "-" << receivedPassword << "-" << std::endl;
+		if (authenticatedClients[fd] == true)
+		{
+			send(fd, "Client has already been authenticated\r\n", 40, 0);
+			return ;
+		}
+		if (receivedPassword.empty())
+		{
+			send(fd, "461 PASS :Not enough parameters\r\n", 34, 0); // ERR_NEEDMOREPARAMS
+			return ;
+		}
 		if (receivedPassword.compare(this->password) == 0)
 		{
-			// std::cout << "Do we enter here" << std::endl;
-			// send(fd, "Password accepted\r\n", 24, 0);
-			return true; // Authentication successful
-		}
-		send(fd, "ERROR :Invalid password\r\n", 24, 0);
+			this->markPasswordAccepted(fd);
+			return ; // Authentication successful
+		} 
+		else
+        {
+			send(fd, "464 :Password mismatch\r\n", 26, 0); // ERR_PASSWDMISMATCH
+			return ;
+        }
 	}
-	return false; // Authentication failed
+	else
+        send(fd, "461 PASS :Not enough parameters\r\n", 34, 0); // ERR_NEEDMOREPARAMS
+	return ; // Authentication failed
 }
 
 void Server::processNickUser(int fd, const std::string& message)
@@ -224,4 +238,9 @@ Client& Server::getClient(int fd)
 			return *it;
 	}
 	throw std::runtime_error("Client not found");
+}
+
+void Server::markPasswordAccepted(int fd)
+{
+    authenticatedClients[fd] = true;
 }

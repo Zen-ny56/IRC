@@ -10,6 +10,7 @@
 #include <arpa/inet.h> //-> for inet_ntoa()
 #include <poll.h> //-> for poll()
 #include <csignal> //-> for signal()
+#include <map>
 #include "Client.hpp" //-> for the class Client
 //-------------------------------------------------------//
 #define RED "\e[1;31m" //-> for red color
@@ -28,6 +29,7 @@ class Server //-> class for server
         std::string password;
         std::vector<Client> clients; //-> vector of clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
+        std::map<int, bool> authenticatedClients;
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization
@@ -39,7 +41,8 @@ class Server //-> class for server
         void clearClients(int fd); //-> clear clients
         void sendCapabilities(int fd);
         void processCapReq(int fd, const std::string& message);
-        bool validatePassword(int fd, const std::string& message);
+        void markPasswordAccepted(int fd);
+        void validatePassword(int fd, const std::string& message);
         void processNickUser(int fd, const std::string& message);
         void processSasl(int fd, const std::string& message);
         void capEnd(int fd);
