@@ -40,7 +40,7 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1 , 0); //-> receive the data
-	if(bytes <= 0)
+	if (bytes <= 0)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
 		clearClients(fd); //-> clear the client
@@ -53,8 +53,10 @@ void Server::receiveNewData(int fd)
 			sendCapabilities(fd);
 		else if (message.rfind("PASS ", 0) == 0)
 			validatePassword(fd, message);
-		else if ((message.rfind("NICK ", 0) == 0) || (message.rfind("USER ", 0) == 0))
+		else if (message.rfind("NICK ", 0) == 0)
 			processNickUser(fd, message);
+		else if (message.rfind("USER ", 0) == 0)
+			processUser(fd, message);
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
@@ -76,7 +78,6 @@ void Server::acceptNewClient()
 	int incofd = accept(serSocketFd, (sockaddr *)&(cliadd), &len); //-> accept the new client
 	if (incofd == -1)
 		{std::cout << "accept() failed" << std::endl; return;}
-
 	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
 		{std::cout << "fcntl() failed" << std::endl; return;}
 
@@ -89,7 +90,7 @@ void Server::acceptNewClient()
 	clients.push_back(cli); //-> add the client to the vector of clients
 	fds.push_back(newPoll); //-> add the client socket to the pollfd
 
-	authenticatedClients[incofd] = false;
+	// authenticatedClients[incofd] = false;
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
 
@@ -166,9 +167,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		std::string receivedPassword = message.substr(5); // Extract password
 		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
-		// std::cout << RED <<  "-" << this->password << "-" << std::endl;
-		// std::cout << GRE << "-" << receivedPassword << "-" << std::endl;
-		if (authenticatedClients[fd] == true)
+		if (clients[fd].getPassAuthen() == true)
 		{
 			send(fd, "462 PASS: You may not register\r\n", 33, 0);
 			return ;
@@ -180,7 +179,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		}
 		if (receivedPassword.compare(this->password) == 0)
 		{
-			this->markPasswordAccepted(fd);
+			clients[fd].setPassAuthen();
 			return ; // Authentication successful
 		} 
 		else
@@ -194,11 +193,56 @@ void Server::validatePassword(int fd, const std::string& message)
 	return ; // Authentication failed
 }
 
+void Server::processUser(int fd, const std::string& message)
+{
+	// Split the message into parts
+	std::cout << YEL << clients[fd].getNickAuthen() << std::endl;
+	if (clients[fd].getNickAuthen() == false || clients[fd].getPassAuthen() == false)
+	{
+		std::cout << RED << "Entering Here" << std::endl;
+		return ;
+	}
+	std::istringstream iss(message);
+	std::vector<std::string> parts;
+	std::string part;
+	while (std::getline(iss, part, ' '))
+        parts.push_back(part);
+    // Check minimum parameter count
+    if (parts.size() < 5 || parts[0] != "USER")
+	{
+		send(fd, "461 USER :Not enough parameters\r\n", 35, 0); // ERR_NEEDMOREPARAMS
+		return;
+	}
+	std::string username = parts[1];
+	std::string unused1 = parts[2]; // This is usually "0"
+	std::string unused2 = parts[3]; // This is usually "*"
+	std::string realname = message.substr(message.find(':') + 1);
+
+	// Check if the user is already registered
+	if (clients[fd].getUserAuthen() == true)
+	{
+		send(fd, "462 :You may not register\r\n", 28, 0); // ERR_ALREADYREGISTERED
+		return;
+	}
+	if (username.empty() || realname.empty())
+	{
+		send(fd, "461 USER :Not enough parameters\r\n", 35, 0); // ERR_NEEDMOREPARAMS
+		return;
+	}
+	// Register the user
+	clients[fd].setUserName(username, realname);
+	// Log successful processing
+	std::cout << "User registered: FD=" << fd << ", Username=" << username
+		<< ", Realname=" << realname << std::endl;
+}
+
 void Server::processNickUser(int fd, const std::string& message)
 {
 	// NICK command
 	if (message.rfind("NICK ", 0) == 0)
 	{
+		if (clients[fd].getPassAuthen() == false || clients[fd].getNickAuthen() == true)
+			return;
 		std::string nickname = message.substr(5); // Extract nickname
 		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
 		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
@@ -268,10 +312,10 @@ Client& Server::getClient(int fd)
 	throw std::runtime_error("Client not found");
 }
 
-void Server::markPasswordAccepted(int fd)
-{
-    authenticatedClients[fd] = true;
-}
+// void Server::markPasswordAccepted(int fd)
+// {
+//     authenticatedClients[fd] = true;
+// }
 
 bool Server::isValidNickname(const std::string& nickname)
 {

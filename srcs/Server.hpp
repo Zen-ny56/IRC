@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
 #include <vector> //-> for vector
 #include <sys/socket.h> //-> for socket()
 #include <sys/types.h> //-> for socket()
@@ -29,8 +30,7 @@ class Server //-> class for server
         std::string password;
         std::vector<Client> clients; //-> vector of clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
-        std::map<int, bool> authenticatedClients;
-        std::map<std::string, int> nicknameMap;
+        std::map<std::string, int> nicknameMap; //-> map for nickname check
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization
@@ -47,6 +47,7 @@ class Server //-> class for server
         void processNickUser(int fd, const std::string& message);
         void processSasl(int fd, const std::string& message);
         bool isValidNickname(const std::string& nickname);
+        void processUser(int fd, const std::string& message);
         void capEnd(int fd);
         Client& getClient(int fd);
 };
