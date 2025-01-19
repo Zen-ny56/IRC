@@ -264,11 +264,11 @@ void Server::processNickUser(int fd, const std::string& message)
 			return;
 		}
 		// Update client's nickname
-		Client& client = getClient(fd);
-		std::string oldNickname = client.getNickname();
+		// Client& client = getClient(fd);
+		std::string oldNickname = clients[fd].getNickname();
 		if (!oldNickname.empty())
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
-		client.setNickname(nickname);
+		clients[fd].setNickname(nickname);
 		nicknameMap[nickname] = fd; // Add the new nickname to the map
 		std::string response = ":" + oldNickname + " NICK " + nickname + "\r\n"; // Inform the client of the nickname change
 		send(fd, response.c_str(), response.length(), 0);
