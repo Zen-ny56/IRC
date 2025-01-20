@@ -2,8 +2,6 @@
 
 Client::Client() :passAuthen(false), userAuthen(false), nickAuthen(false), userName("default"), realName("default")
 {
-    std::cout << RED << "Should only enter here once" << std::endl;
-    std::cout << YEL << nickAuthen << std::endl;
 }
 
 int Client::getFd(){return fd;}
@@ -14,11 +12,9 @@ void Client::setIpAdd(std::string IPadd){this->IPadd = IPadd;}
 
 void Client::setNickname(std::string nickName)
 {
-    std::cout << GRE << "We do change the values" << std::endl;
     this->nickName = nickName;
     this->nickAuthen = true;
-    std::cout << YEL << this->nickAuthen << std::endl;
- }
+}
 
 void Client::setUserName(std::string userName, std::string realName)
 {

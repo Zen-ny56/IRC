@@ -20,7 +20,7 @@
 #define YEL "\e[1;33m" //-> for yellow color
 
 class Client;
-
+class Channel;
 class Server //-> class for server
 {
     private:
@@ -31,6 +31,8 @@ class Server //-> class for server
         std::vector<Client> clients; //-> vector of clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<std::string, int> nicknameMap; //-> map for nickname check
+        std::map<std::string, Channel> channels;
+
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization
@@ -50,4 +52,7 @@ class Server //-> class for server
         void processUser(int fd, const std::string& message);
         void capEnd(int fd);
         Client& getClient(int fd);
+        void processQuit(int fd, const std::string& reason);
+        void disconnectClient(int fd);
+
 };

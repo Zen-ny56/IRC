@@ -2,7 +2,8 @@
 
 Server::Server(){serSocketFd = -1;}
 
-void Server::clearClients(int fd){ //-> clear the clients
+void Server::clearClients(int fd)
+{ 	//-> clear the clients
 	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
 		if (fds[i].fd == fd)
 			{fds.erase(fds.begin() + i); break;}
@@ -23,8 +24,9 @@ void Server::signalHandler(int signum)
 	Server::signal = true; //-> set the static boolean to true to stop the server
 }
 
-void	Server::closeFds(){
-	for(size_t i = 0; i < clients.size(); i++){ //-> close all the clients
+void	Server::closeFds()
+{
+	for (size_t i = 0; i < clients.size(); i++){ //-> close all the clients
 		std::cout << RED << "Client <" << clients[i].getFd() << "> Disconnected" << WHI << std::endl;
 		close(clients[i].getFd());
 	}
@@ -59,6 +61,10 @@ void Server::receiveNewData(int fd)
 			processUser(fd, message);
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
+		else if (message.find("QUIT", 0) == 0) {
+			processQuit(fd, message);
+			clearClients(fd);
+			close(fd); }
 		else if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
@@ -66,6 +72,26 @@ void Server::receiveNewData(int fd)
 		else
 			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 	}
+}
+
+void Server::processQuit(int fd, const std::string& reason) 
+{
+    std::string nickname = clients[fd].getNickname();
+	// Compose the QUIT message
+	std::string quitMessage = ":" + nickname + " QUIT :Quit: " + (reason.empty() ? "" : reason);
+	// Notify all clients sharing channels with the quitting client
+	// broadcastToSharedChannels(fd, quitMessage); // Assume this function broadcasts to all relevant clients
+    // std::string errorMessage = "ERROR :Closing link (" + nickname + ") [Quit: " + reason + "]";
+	// send(fd, quitMessage.c_str(), quitMessage.size(), 0);
+    // Remove the client from the server
+    disconnectClient(fd); // Assume this function handles removing the client from all data structures and closing the connection
+}
+
+void Server::disconnectClient(int fd)
+{
+	clearClients(fd);
+	close(fd);
+	std::cout << RED << "Client <" << fd <<  "> Disconnected" << std::endl;
 }
 
 void Server::acceptNewClient()
