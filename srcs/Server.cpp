@@ -61,10 +61,10 @@ void Server::receiveNewData(int fd)
 			processUser(fd, message);
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
-		else if (message.find("QUIT", 0) == 0) {
+		else if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
-			clearClients(fd);
-			close(fd); }
+		else if (message.find("JOIN", 0) == 0)
+			joinChannel(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
@@ -363,4 +363,23 @@ bool Server::isValidNickname(const std::string& nickname)
 			return false;
 	}
 	return true;
+}
+
+void Server::joinChannel(int fd, const std::string& channelName)
+{
+	if (channels.find(channelName) == channels.end())
+        channels[channelName] = Channel(channelName);
+    Channel& channel = channels[channelName];
+    channel.addClient(fd);
+    std::string joinMessage = ":" + getClient(fd).getNickname() + " JOIN :" + channelName + "\r\n";
+    broadcastToChannel(channelName, joinMessage, fd);
+}
+
+void Server::broadcastToChannel(const std::string& channelName, const std::string& joinMessage, int fd)
+{
+	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+	{
+		//Iterate through every client and send ...
+	}
+	throw std::runtime_error("Client not found");
 }
