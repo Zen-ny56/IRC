@@ -400,6 +400,75 @@ void Server::handleChannel(int fd, const std::string& message)
     }
 }
 
+void Server::joinChannel(int fd, const std::string& channelName, const std::string& key)
+{
+	// 1. Check if the client is already in the channel
+	Client& client = getClient(fd);
+	if (client.isInChannel(channelName))
+		return; // Client is already in the channel, no action needed
+    // 2. Find or create the channel
+	if (channels.find(channelName) == channels.end())
+	{
+		channels[channelName] = Channel(channelName);
+		channels[channelName].setKey(""); // Set default key (empty by default)
+	}
+	Channel& channel = channels[channelName];
+    // 3. Validate conditions for joining the channel
+	if (channel.isInviteOnly() && !channel.isInvited(client.getNickname()))
+	{
+		std::string errorMsg = RED + "473 " + clients[fd].getNickname() + " " + channelName + " :Invite-only channel\r\n";
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		return;
+    }
+    if (channel.isFull())
+	{
+		std::string errorMsg = RED + clients[fd].getNickname() + " " + channelName + " :Channel is full\r\n";
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		return;
+	}
+	if (!channel.getKey().empty() && channel.getKey() != key)
+	{
+		std::string errorMsg = RED + "475" + clients[fd].getNickname() + " :Incorrrect channel key\r\n";
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		return;
+    }
+	if (channel.isBanned(client.getNickname()))
+	{
+		std::string errorMsg = RED + "474" + clients[fd].getNickname() + " :You are banned from this channel\r\n";
+        sendToClient(fd, errorMsg.c_str(), errorMsg.size());
+        return;
+    }
+	
+	// 4. Add the client to the channel
+	channel.addClient(fd);
+	client.joinChannel(channelName);
+	
+	// 5. Broadcast JOIN message to all clients in the channel
+	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n";
+	broadcastToChannel(channelName, joinMessage, fd);
+
+    // 6. Send the channel topic (or indicate no topic set)
+    if (!channel.getTopic().empty())
+	{
+		std::string info = YEL + "332 " + clients[fd].getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
+		send(fd, info.c_str() ,info.size(), 0);
+	} else {
+		std::string info = YEL + "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
+		send(fd, info.c_str(), info.size(), 0);
+    }
+
+    // 7. Send the list of users in the channel
+    std::string nameReply = "353 " + client.getNickname() + " = " + channelName + " :";
+    const std::set<int>& clients = channel.getClients();
+    for (int clientFd : clients) {
+        nameReply += getClient(clientFd).getNickname() + " ";
+    }
+    nameReply += "\r\n";
+    sendToClient(fd, nameReply);
+
+    sendToClient(fd, "366 " + client.getNickname() + " " + channelName + " :End of /NAMES list\r\n");
+}
+
 void Server::broadcastToChannel(const std::string& channelName, const std::string& joinMessage, int fd)
 {
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
