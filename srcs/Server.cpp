@@ -365,14 +365,39 @@ bool Server::isValidNickname(const std::string& nickname)
 	return true;
 }
 
-void Server::joinChannel(int fd, const std::string& channelName)
+void Server::handleChannel(int fd, const std::string& message)
 {
-	if (channels.find(channelName) == channels.end())
-        channels[channelName] = Channel(channelName);
-    Channel& channel = channels[channelName];
-    channel.addClient(fd);
-    std::string joinMessage = ":" + getClient(fd).getNickname() + " JOIN :" + channelName + "\r\n";
-    broadcastToChannel(channelName, joinMessage, fd);
+	//Extract parameters after JOIN , client is going to send JOIN #channel1,#channel2 key1,key2 or JOIN #channel1
+	size_t paramsStart = message.find(' ') + 1;
+    if (paramsStart == std::string::npos || paramsStart >= message.length())
+	{
+		std::string errormsg = RED + "461 JOIN :Not enough parameters\r\n";
+		send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
+		return;
+	}
+	std::string params = message.substr(paramsStart);
+	// Split channels and keys
+	size_t spacePos = params.find(' ');
+	std::string channelsPart = params.substr(0, spacePos); // Comma-separated channel names
+	std::string keysPart = (spacePos != std::string::npos) ? params.substr(spacePos + 1) : ""; // Comma-separated keys
+
+	// Parse channels and keys
+	std::vector<std::string> channels = splitByDelimiter(channelsPart, ',');
+	std::vector<std::string> keys = splitByDelimiter(keysPart, ',');
+
+	//Iterate through each channel and call joinChannel
+	for (size_t i = 0; i < channels.size(); ++i)
+	{
+		const std::string& channelName = channels[i];
+		const std::string& key = (i < keys.size()) ? keys[i] : ""; // Match keys to channels if possible
+        if (!isValidChannelName(channelName))
+		{
+			std::string errormsg = RED + "476 " + channelName + " :Invalid channel name\r\n";
+			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
+			continue;
+		}
+		joinChannel(fd, channelName, key);
+    }
 }
 
 void Server::broadcastToChannel(const std::string& channelName, const std::string& joinMessage, int fd)
@@ -382,4 +407,26 @@ void Server::broadcastToChannel(const std::string& channelName, const std::strin
 		//Iterate through every client and send ...
 	}
 	throw std::runtime_error("Client not found");
+}
+
+std::vector<std::string> Server::splitByDelimiter(const std::string& str, char delimiter)
+{
+	std::vector<std::string> result;
+	std::stringstream ss(str);
+	std::string item;
+
+	while (std::getline(ss, item, delimiter))
+	{
+		if (!item.empty())
+			result.push_back(item);
+	}
+	return result;
+}
+
+bool Server::isValidChannelName(const std::string& channelName)
+{
+	if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
+        return false;
+	// Additional validation rules can be added here
+	return true;
 }
