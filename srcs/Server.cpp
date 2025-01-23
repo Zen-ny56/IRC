@@ -195,12 +195,14 @@ void Server::validatePassword(int fd, const std::string& message)
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
 		if (clients[fd].getPassAuthen() == true)
 		{
-			send(fd, "462 PASS: You may not register\r\n", 33, 0);
+			std::string errMsg = RED + "462 PASS: You may not register\r\n";
+			send(fd, errMsg.c_str(), errMsg.size(), 0);
 			return ;
 		}
 		if (receivedPassword.empty())
 		{
-			send(fd, "461 PASS :Not enough parameters\r\n", 34, 0); // ERR_NEEDMOREPARAMS
+			std::string errMsg = RED + "461 PASS :Not enough parameters\r\n";
+			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 			return ;
 		}
 		if (receivedPassword.compare(this->password) == 0)
@@ -210,12 +212,11 @@ void Server::validatePassword(int fd, const std::string& message)
 		} 
 		else
         {
-			send(fd, "464 :Password incorrect\r\n", 26, 0); // ERR_PASSWDMISMATCH
+			std::string errMsg = RED + "464 :Password incorrect\r\n";
+			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 			return ;
         }
 	}
-	else
-        send(fd, "461 PASS :Not enough parameters\r\n", 34, 0); // ERR_NEEDMOREPARAMS
 	return ; // Authentication failed
 }
 
@@ -236,7 +237,8 @@ void Server::processUser(int fd, const std::string& message)
     // Check minimum parameter count
     if (parts.size() < 5 || parts[0] != "USER")
 	{
-		send(fd, "461 USER :Not enough parameters\r\n", 35, 0); // ERR_NEEDMOREPARAMS
+		std::string errMsg = RED +  "461 USER :Not enough parameters\r\n";
+		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
 	std::string username = parts[1];
@@ -247,12 +249,14 @@ void Server::processUser(int fd, const std::string& message)
 	// Check if the user is already registered
 	if (clients[fd].getUserAuthen() == true)
 	{
-		send(fd, "462 :You may not register\r\n", 28, 0); // ERR_ALREADYREGISTERED
+		std::string errMsg = RED + "462 :You may not register\r\n";
+		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_ALREADYREGISTERED
 		return;
 	}
 	if (username.empty() || realname.empty())
 	{
-		send(fd, "461 USER :Not enough parameters\r\n", 35, 0); // ERR_NEEDMOREPARAMS
+		std::string errMsg = RED +  "461 USER :Not enough parameters\r\n";
+		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
 	// Register the user
@@ -274,7 +278,8 @@ void Server::processNickUser(int fd, const std::string& message)
 		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
 		if (nickname.empty())
 		{
-            send(fd, "431 :No nickname given\r\n", 24, 0); // ERR_NONICKNAMEGIVEN
+			std::string errorMsg = RED + "431 :No nickname given\r\n";
+            send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
 			return;
 		}
 		if (!isValidNickname(nickname))
@@ -296,15 +301,10 @@ void Server::processNickUser(int fd, const std::string& message)
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
 		clients[fd].setNickname(nickname);
 		nicknameMap[nickname] = fd; // Add the new nickname to the map
-		std::string response = ":" + oldNickname + " NICK " + nickname + "\r\n"; // Inform the client of the nickname change
+		std::string response = GRE + ":" + oldNickname + " NICK " + nickname + "\r\n"; // Inform the client of the nickname change
 		send(fd, response.c_str(), response.length(), 0);
 		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	}
-	else if (message.rfind("USER ", 0) == 0)
-	{
-		std::cout << "Received USER command: " << message << std::endl;
-        // Further processing for USER command can be added here
-    }
 }
 
 void Server::processSasl(int fd, const std::string& message)
@@ -337,11 +337,6 @@ Client& Server::getClient(int fd)
 	}
 	throw std::runtime_error("Client not found");
 }
-
-// void Server::markPasswordAccepted(int fd)
-// {
-//     authenticatedClients[fd] = true;
-// }
 
 bool Server::isValidNickname(const std::string& nickname)
 {
@@ -403,18 +398,22 @@ void Server::handleChannel(int fd, const std::string& message)
 void Server::joinChannel(int fd, const std::string& channelName, const std::string& key)
 {
 	// 1. Check if the client is already in the channel
-	Client& client = getClient(fd);
-	if (client.isInChannel(channelName))
-		return; // Client is already in the channel, no action needed
+	// Client& client = getClient(fd);
+	// if (channel.isInChannel(fd))
+	// 	return; // Client is already in the channel, no action needed
     // 2. Find or create the channel
-	if (channels.find(channelName) == channels.end())
+	if (channels.find(channelName) != channels.end())
 	{
+		Channel& channel = channels[channelName];
+		if (channel.isInChannel(clients[fd].getNickname()))
+			return ;
+	} else {
 		channels[channelName] = Channel(channelName);
-		channels[channelName].setKey(""); // Set default key (empty by default)
+		channels[channelName].setKey(key); // Set default key (empty by default)
+		Channel& channel = channels[channelName];
 	}
-	Channel& channel = channels[channelName];
     // 3. Validate conditions for joining the channel
-	if (channel.isInviteOnly() && !channel.isInvited(client.getNickname()))
+	if (channel.isInviteOnly() && !channel.isInvited(clients[fd].getNickname()))
 	{
 		std::string errorMsg = RED + "473 " + clients[fd].getNickname() + " " + channelName + " :Invite-only channel\r\n";
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
@@ -435,17 +434,16 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	if (channel.isBanned(client.getNickname()))
 	{
 		std::string errorMsg = RED + "474" + clients[fd].getNickname() + " :You are banned from this channel\r\n";
-        sendToClient(fd, errorMsg.c_str(), errorMsg.size());
+        send(fd, errorMsg.c_str(), errorMsg.size(), 0);
         return;
     }
 	
 	// 4. Add the client to the channel
 	channel.addClient(fd);
-	client.joinChannel(channelName);
 	
 	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n";
-	broadcastToChannel(channelName, joinMessage, fd);
+	std::string joinMessage = ":" + clients[fd].getNickname() + " JOIN :" + channelName + "\r\n";
+	channel.broadcastToChannel(joinMessage);
 
     // 6. Send the channel topic (or indicate no topic set)
     if (!channel.getTopic().empty())
@@ -453,30 +451,26 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 		std::string info = YEL + "332 " + clients[fd].getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
 		send(fd, info.c_str() ,info.size(), 0);
 	} else {
-		std::string info = YEL + "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
+		std::string info = YEL + "331 " + clients[fd].getNickname() + " " + channelName + " :No topic is set\r\n";
 		send(fd, info.c_str(), info.size(), 0);
     }
 
     // 7. Send the list of users in the channel
-    std::string nameReply = "353 " + client.getNickname() + " = " + channelName + " :";
-    const std::set<int>& clients = channel.getClients();
-    for (int clientFd : clients) {
-        nameReply += getClient(clientFd).getNickname() + " ";
-    }
-    nameReply += "\r\n";
-    sendToClient(fd, nameReply);
-
-    sendToClient(fd, "366 " + client.getNickname() + " " + channelName + " :End of /NAMES list\r\n");
-}
-
-void Server::broadcastToChannel(const std::string& channelName, const std::string& joinMessage, int fd)
-{
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+    // std::string nameReply = "353 " + client.getNickname() + " = " + channelName + " :";
+	std::vector<int> clientList = channel.listUsers();
+	for (std::vector<int>::iterator it = clientList.begin(); it != clientList.end(); ++it;)
 	{
-		//Iterate through every client and send ...
+		// if )
 	}
-	throw std::runtime_error("Client not found");
+    // for (int clientFd : clients) {
+    //     nameReply += getClient(clientFd).getNickname() + " ";
+    // }
+    // nameReply += "\r\n";
+    // sendToClient(fd, nameReply);
+	std::string msg = YEL + "366 " + clients[fd].getNickname() + " " + channelName + " :End of /Names list\r\n";
+    send(fd, msg.c_str(), msg.size(), 0);
 }
+
 
 std::vector<std::string> Server::splitByDelimiter(const std::string& str, char delimiter)
 {
@@ -499,3 +493,4 @@ bool Server::isValidChannelName(const std::string& channelName)
 	// Additional validation rules can be added here
 	return true;
 }
+
