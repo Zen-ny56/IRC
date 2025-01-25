@@ -54,8 +54,10 @@ class Server; //-> class for server
         void processUser(int fd, const std::string& message);
         void capEnd(int fd);
         Client& getClient(int fd);
-        void joinChannel(int fd, const std::string& channelName);
+        void handleChannel(int fd, const std::string& message);
         void processQuit(int fd, const std::string& reason);
         void disconnectClient(int fd);
+        void joinChannel(int fd, const std::string& channelName, const std::string& key);
+
 };
   

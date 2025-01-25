@@ -1,6 +1,6 @@
 #include "Channel.hpp"
 
-Channel::Channel(const std::string& channelName): channelName(channelName), key("") ,inviteOnly(false), max(INT_MAX)
+Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX)
 {
 }
 
@@ -9,13 +9,7 @@ void Channel::addClient(int fd)
 	clientFds.push_back(fd);
 }
 
-void Channel::setKey(const std::string& key)
-{
-	if (key.empty())
-		this->key = "";
-	else
-		this->key = key;
-}
+void Channel::setKey(const std::string& key){this->key = key;}
 
 void Channel::setMax(int max){this->max = max;}
 
@@ -38,6 +32,16 @@ int Channel::isInviteOnly()
 	if (this->inviteOnly == false)
 		return (1);
 	return (0);
+}
+
+int Channel::isInvited(int fd)
+{
+	if (_isInvited.find(fd) != _isInvited.end())
+	{
+		if (_isInvited[fd] == false)
+			return 1;
+	}
+	return 0;
 }
 
 int Channel::isBanned(const std::string& nickName)

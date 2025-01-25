@@ -64,7 +64,7 @@ void Server::receiveNewData(int fd)
 		else if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
 		else if (message.find("JOIN", 0) == 0)
-			joinChannel(fd, message);
+			handleChannel(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
@@ -405,15 +405,14 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	if (channels.find(channelName) != channels.end())
 	{
 		Channel& channel = channels[channelName];
-		if (channel.isInChannel(clients[fd].getNickname()))
+		if (channel.isInChannel(fd))
 			return ;
 	} else {
-		channels[channelName] = Channel(channelName);
-		channels[channelName].setKey(key); // Set default key (empty by default)
+		channels[channelName] = Channel(channelName, key);
 		Channel& channel = channels[channelName];
 	}
     // 3. Validate conditions for joining the channel
-	if (channel.isInviteOnly() && !channel.isInvited(clients[fd].getNickname()))
+	if (channel.isInviteOnly() && !channel.isInvited(fd))
 	{
 		std::string errorMsg = RED + "473 " + clients[fd].getNickname() + " " + channelName + " :Invite-only channel\r\n";
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
@@ -456,17 +455,18 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
     }
 
     // 7. Send the list of users in the channel
-    // std::string nameReply = "353 " + client.getNickname() + " = " + channelName + " :";
 	std::vector<int> clientList = channel.listUsers();
-	for (std::vector<int>::iterator it = clientList.begin(); it != clientList.end(); ++it;)
+	for (std::vector<int>::iterator it = clientList.begin(); it != clientList.end(); ++it)
 	{
-		// if )
+		for (std::vector<Clients>::iterator bt = clients.begin(); bt != clients.end(); ++bt)
+		{
+			if (bt->getFd() == *it)
+			{
+				std::string msg = YEL + "353 " + clients[fd].getNickname() + " = " + channelName + " :" +  bt->getNickname() + "\r\n";
+				send(fd, msg.c_str(), msg.size(), 0);
+			}
+		}
 	}
-    // for (int clientFd : clients) {
-    //     nameReply += getClient(clientFd).getNickname() + " ";
-    // }
-    // nameReply += "\r\n";
-    // sendToClient(fd, nameReply);
 	std::string msg = YEL + "366 " + clients[fd].getNickname() + " " + channelName + " :End of /Names list\r\n";
     send(fd, msg.c_str(), msg.size(), 0);
 }
