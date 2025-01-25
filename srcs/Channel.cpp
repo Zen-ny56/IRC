@@ -1,7 +1,32 @@
 #include "Channel.hpp"
 
+Channel::Channel()
+{
+}
+
+Channel::~Channel()
+{
+}
+
 Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX)
 {
+}
+
+Channel& Channel::operator=(const Channel& other)
+{
+	if (this != &other)
+	{
+		// Assign each member variable
+		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
+		this->key = other.key;                 // key is also const and cannot be reassigned
+		this->topic = other.topic;
+		this->inviteOnly = other.inviteOnly;
+		this->max = other.max;
+		this->clientFds = other.clientFds;
+		this->_isInvited = other._isInvited;
+		this->_isBanned = other._isBanned;
+	}
+	return *this;
 }
 
 void Channel::addClient(int fd)
@@ -18,9 +43,9 @@ int Channel::getMax(){return this->max;}
 int Channel::isFull()
 {
 	int c = 0;
-	for (std::vector<int>::iterator it = clientsFds.begin(); it != clientFds.end(); ++it)
-		c++
-	if (channel.getMax() == c)
+	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+		c++;
+	if (this->getMax() == c)
 		return (1);
 	return (0);
 }
@@ -46,17 +71,17 @@ int Channel::isInvited(int fd)
 
 int Channel::isBanned(const std::string& nickName)
 {
-	for (std::vector<std::string>::iterator it = isBanned.begin(); it != isBanned.end(); ++it)
+	for (std::vector<std::string>::iterator it = _isBanned.begin(); it != _isBanned.end(); ++it)
 	{
-		if (*it.compare(nickName) == 0)
+		if ((*it).compare(nickName) == 0)
 			return (1);
 	}
 	return (0);
 }
 
-int Client::isInChannel(int fd)
+int Channel::isInChannel(int fd)
 {
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientsFds.end(); ++it)
+	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
 	{
 		if (*it == fd)
 			return (1);
@@ -76,7 +101,7 @@ std::string Channel::getTopic(){return this->topic;}
 
 void Channel::setTopic(const std::string& topic){this->topic = topic;}
 
-std::vector Channel::listUsers()
+std::vector<int> Channel::listUsers()
 {
 	std::vector<int> temp;
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)

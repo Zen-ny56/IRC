@@ -23,7 +23,7 @@
 class Client;
 class Channel;
 
-class Server; //-> class for server
+class Server //-> class for server
 {
     private:
         int serSocketFd; //-> server socket file descriptor
@@ -58,6 +58,9 @@ class Server; //-> class for server
         void processQuit(int fd, const std::string& reason);
         void disconnectClient(int fd);
         void joinChannel(int fd, const std::string& channelName, const std::string& key);
+        std::vector<std::string> splitByDelimiter(const std::string& str, char delimiter);
+        bool isValidChannelName(const std::string& channelName);
+
 
 };
   
