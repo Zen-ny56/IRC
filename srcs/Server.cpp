@@ -63,7 +63,7 @@ void Server::receiveNewData(int fd)
 			processCapReq(fd, message);
 		else if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
-		else if (message.find("JOIN", 0) == 0)
+		else if (message.find("JOIN", 0) == 0 && clients[fd].getUserAuthen())
 			handleChannel(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
@@ -280,7 +280,7 @@ void Server::sendWelcome(int fd)
 	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
 
 	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + clients[fd].getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n";
+	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + clients[fd].getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\e[0m" + "\r\n";
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
 }
 
@@ -420,10 +420,12 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	{
 		// Channel doesn't exist, so create it
 		channels[channelName] = Channel(channelName, key);
+		std::cout << RED << "Once" << std::endl;
 		it = channels.find(channelName); // Re-get the iterator after creation
 	}
 	// Now we can safely use 'it' to get the channel reference
 	Channel& channel = it->second;
+	if (channel.isInChannel(fd))
     // 3. Validate conditions for joining the channel
 	if (channel.isInviteOnly() && !channel.isInvited(fd))
 	{

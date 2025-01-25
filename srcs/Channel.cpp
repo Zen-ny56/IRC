@@ -55,8 +55,8 @@ std::string Channel::getKey(){return this->key;}
 int Channel::isInviteOnly()
 {
 	if (this->inviteOnly == false)
-		return (1);
-	return (0);
+		return (0);
+	return (1);
 }
 
 int Channel::isInvited(int fd)
