@@ -26,5 +26,7 @@ public:
 	bool getPassAuthen();
 	void setIpAdd(std::string ipadd);//-> setter for ipadd
 	void setUserName(std::string userName, std::string realName);
+	std::string getIPadd();
+	std::string getUserName();
 	std::string getNickname();
 };

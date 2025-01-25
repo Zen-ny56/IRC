@@ -35,5 +35,4 @@ class Channel
 		std::vector<int> listUsers();
 		void setTopic(const std::string& topic);
 		int isInviteOnly();
-
 };

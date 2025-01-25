@@ -262,8 +262,26 @@ void Server::processUser(int fd, const std::string& message)
 	// Register the user
 	clients[fd].setUserName(username, realname);
 	// Log successful processing
-	std::cout << "User registered: FD=" << fd << ", Username=" << username
-		<< ", Realname=" << realname << std::endl;
+	this->sendWelcome(fd);
+}
+
+void Server::sendWelcome(int fd)
+{
+	// 1. RPL_WELCOME (001)
+	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + clients[fd].getNickname() + " :Welcome to the IRC Network " + clients[fd].getNickname() + "!" + clients[fd].getUserName() + "@" + clients[fd].getIPadd() + "\r\n";
+	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
+
+	// 2. RPL_YOURHOST (002)
+	std::string yourHostMsg = std::string(YEL) + ":" + "ircserv" + " 002 " + clients[fd].getNickname() + " :Your host is " + "ircserv" + ", running version 1.0" + "\r\n";
+	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
+
+	// 3. RPL_CREATED (003)
+	std::string createdMsg = std::string(YEL) + ":" + "ircserv" + " 003 " + clients[fd].getNickname() + " :This server was created on 01 Jan 2020" + "\r\n";
+	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
+
+	// 4. RPL_MYINFO (004)
+	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + clients[fd].getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n";
+	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
 }
 
 void Server::processNickUser(int fd, const std::string& message)

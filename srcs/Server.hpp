@@ -60,7 +60,6 @@ class Server //-> class for server
         void joinChannel(int fd, const std::string& channelName, const std::string& key);
         std::vector<std::string> splitByDelimiter(const std::string& str, char delimiter);
         bool isValidChannelName(const std::string& channelName);
-
-
+        void sendWelcome(int fd);
 };
   
