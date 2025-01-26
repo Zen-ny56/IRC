@@ -422,6 +422,7 @@ void Server::handleChannel(int fd, const std::string& message)
 			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
 			continue;
 		}
+		std::cout << GRE << channelName << std::endl;
 		joinChannel(fd, channelName, key);
     }
 }
@@ -538,25 +539,49 @@ void Server::processPrivmsg(int fd, const std::string& message)
 	if (bt == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client& sender = (*this)[bt];
-	size_t spacePos = message.find(' ');  // Find the first space to separate target and message content
-	if (spacePos == std::string::npos)
-	{
-		std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
-		send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
-		return;
-	}
-	std::string target = message.substr(0, spacePos); // The target can be a user or a channel
-	std::string text = message.substr(spacePos + 1); // The message to send
-	// Check if the message is empty (ERR_NOTEXTTOSEND)
-	if (text.empty())
-	{
-		std::string error = std::string(RED) + "412: No text to send\r\n" + std::string(WHI);
-		send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
-		return;
-	}
+    size_t commandEnd = message.find(' ');
+    if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
+        std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
+        send(fd, error.c_str(), error.size(), 0); // ERR_UNKNOWNCOMMAND
+        return;
+    }
+
+    // Skip the "PRIVMSG" part
+    size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
+    size_t spacePos = message.find(' ', targetStart); // Find space after target
+    if (spacePos == std::string::npos) {
+        // If there's no space after the target, no message text is provided
+        std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
+        send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
+        return;
+    }
+
+    // Extract the target
+    std::string target = message.substr(targetStart, spacePos - targetStart);
+
+    // Skip any spaces after the target and check for message text
+    size_t textStart = message.find_first_not_of(' ', spacePos + 1);
+    if (textStart == std::string::npos) {
+        // If no text is found after the target, return an error
+        std::string error = std::string(RED) + "412: No text to send\r\n" + std::string(WHI);
+        send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
+        return;
+    }
+
+    // Extract the actual message text
+    std::string text = message.substr(textStart);
+
+    // Debugging output to confirm parsing (remove in production)
+    std::cout << "Parsed Target: " << "-" << target << "-" << "\n";
+    std::cout << "Parsed Text: " << text << "-" <<  "\n";
+
+	// std::cout << GRE 
 	if (target[0] == '#')
 	{
-		std::map<std::string, Channel>::iterator it = channels.find(target);
+		std::string trimmedTarget = trim(target);
+		// std::cout << " - " << it->first << std::endl;
+		// std::cout << GRE << "Successfully enter here\n" << std::endl;
+		std::map<std::string, Channel>::iterator it = channels.find(trimmedTarget);
 		if (it == channels.end())
 		{
 			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
@@ -580,6 +605,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		{
 			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI);
             send(fd, error.c_str(), error.size(), 0); // ERR_NOSUCHNICK
+			return ;
 		}
 		Client& recepient = (*this)[ct];
         // Send the private message to the user
@@ -600,3 +626,9 @@ std::vector<Client>::iterator Server::getClientUsingNickname(const std::string& 
 	return (clients.end());
 }
 
+
+std::string Server::trim(const std::string& str) {
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
+}

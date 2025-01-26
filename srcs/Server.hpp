@@ -64,5 +64,7 @@ class Server //-> class for server
         Client& operator[](std::vector<Client>::iterator it);
         void processPrivmsg(int fd, const std::string& message);
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
+        std::string trim(const std::string& str);
+ 
 };
   
