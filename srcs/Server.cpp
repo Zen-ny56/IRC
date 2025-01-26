@@ -190,10 +190,12 @@ void Server::validatePassword(int fd, const std::string& message)
 {
 	if (message.rfind("PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
+		std::vector<Client>::iterator it = getClient(fd);
+		Client& client = (*this)[it];
 		std::string receivedPassword = message.substr(5); // Extract password
 		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
-		if (clients[fd].getPassAuthen() == true)
+		if (client.getPassAuthen() == true)
 		{
 			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n";
 			send(fd, errMsg.c_str(), errMsg.size(), 0);
@@ -207,7 +209,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		}
 		if (receivedPassword.compare(this->password) == 0)
 		{
-			clients[fd].setPassAuthen();
+			client.setPassAuthen();
 			return ; // Authentication successful
 		} 
 		else
@@ -289,7 +291,9 @@ void Server::processNickUser(int fd, const std::string& message)
 	// NICK command
 	if (message.rfind("NICK ", 0) == 0)
 	{
-		if (clients[fd].getPassAuthen() == false || clients[fd].getNickAuthen() == true)
+		std::vector<Client>::iterator it = getClient(fd);
+		Client& client = (*this)[it];
+		if (client.getPassAuthen() == false || client.getNickAuthen() == true)
 			return;
 		std::string nickname = message.substr(5); // Extract nickname
 		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
@@ -317,9 +321,9 @@ void Server::processNickUser(int fd, const std::string& message)
 		std::string oldNickname = clients[fd].getNickname();
 		if (!oldNickname.empty())
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
-		clients[fd].setNickname(nickname);
+		client.setNickname(nickname);
 		nicknameMap[nickname] = fd; // Add the new nickname to the map
-		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + nickname + "\r\n"; // Inform the client of the nickname change
+		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n"; // Inform the client of the nickname change
 		send(fd, response.c_str(), response.length(), 0);
 		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	}
@@ -346,12 +350,12 @@ void Server::capEnd(int fd)
 	send(fd, capEnd.c_str(), capEnd.size(), 0);
 }
 
-Client& Server::getClient(int fd)
+std::vector<Client>::iterator Server::getClient(int fd)
 {
 	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
 		if (it->getFd() == fd)
-			return *it;
+			return it;
 	}
 	throw std::runtime_error("Client not found");
 }
@@ -508,3 +512,9 @@ bool Server::isValidChannelName(const std::string& channelName)
 	return true;
 }
 
+Client& Server::operator[](std::vector<Client>::iterator it)
+{
+	if (it == clients.end())
+		throw std::out_of_range("Iterator out of range for clients vector");
+	return *it;
+}

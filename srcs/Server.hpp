@@ -53,7 +53,7 @@ class Server //-> class for server
         bool isValidNickname(const std::string& nickname);
         void processUser(int fd, const std::string& message);
         void capEnd(int fd);
-        Client& getClient(int fd);
+        std::vector<Client>::iterator getClient(int fd);
         void handleChannel(int fd, const std::string& message);
         void processQuit(int fd, const std::string& reason);
         void disconnectClient(int fd);
@@ -61,5 +61,6 @@ class Server //-> class for server
         std::vector<std::string> splitByDelimiter(const std::string& str, char delimiter);
         bool isValidChannelName(const std::string& channelName);
         void sendWelcome(int fd);
+        Client& operator[](std::vector<Client>::iterator it);
 };
   
