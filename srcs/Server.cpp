@@ -585,7 +585,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
         // Send the private message to the user
         std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
         send(recepient.getFd(), response.c_str(), response.size(), 0);
-    }
+    } 
 }
 
 // // Helper methods for getting client and checking channels
