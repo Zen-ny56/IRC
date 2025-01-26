@@ -62,5 +62,7 @@ class Server //-> class for server
         bool isValidChannelName(const std::string& channelName);
         void sendWelcome(int fd, Client& client);
         Client& operator[](std::vector<Client>::iterator it);
+        void processPrivmsg(int fd, const std::string& message);
+        std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
 };
   

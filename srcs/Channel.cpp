@@ -89,11 +89,11 @@ int Channel::isInChannel(int fd)
 	return (0);
 }
 
-void Channel::broadcastToChannel(const std::string& joinMessage)
+void Channel::broadcastToChannel(const std::string& message)
 {
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
 	{
-		send(*it, joinMessage.c_str(), joinMessage.size(), 0);
+		send(*it, message.c_str(), message.size(), 0);
 	}
 }
 

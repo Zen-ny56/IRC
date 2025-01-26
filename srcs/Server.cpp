@@ -65,6 +65,8 @@ void Server::receiveNewData(int fd)
 			processQuit(fd, message);
 		else if (message.find("JOIN", 0) == 0)
 			handleChannel(fd, message);
+		else if (message.find("PRIVMSG", 0) == 0)
+			processPrivmsg(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
@@ -191,6 +193,8 @@ void Server::validatePassword(int fd, const std::string& message)
 	if (message.rfind("PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
 		std::vector<Client>::iterator it = getClient(fd);
+		if (it == clients.end())
+			throw std::runtime_error("No client was found\n");
 		Client& client = (*this)[it];
 		std::string receivedPassword = message.substr(5); // Extract password
 		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
@@ -226,8 +230,9 @@ void Server::processUser(int fd, const std::string& message)
 {
 	// Split the message into parts
 	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("Client was not found]\n");
 	Client& client = (*this)[it];
-	std::cout << YEL << clients[fd].getNickAuthen() << std::endl;
 	if (client.getNickAuthen() == false || client.getPassAuthen() == false)
 	{
 		std::cout << RED << "Entering Here" << WHI << std::endl;
@@ -294,6 +299,8 @@ void Server::processNickUser(int fd, const std::string& message)
 	if (message.rfind("NICK ", 0) == 0)
 	{
 		std::vector<Client>::iterator it = getClient(fd);
+		if (it == clients.end())
+			throw  std::runtime_error("Client was not found\n");
 		Client& client = (*this)[it];
 		if (client.getPassAuthen() == false || client.getNickAuthen() == true)
 			return;
@@ -320,7 +327,7 @@ void Server::processNickUser(int fd, const std::string& message)
 		}
 		// Update client's nickname
 		// Client& client = getClient(fd);
-		std::string oldNickname = clients[fd].getNickname();
+		std::string oldNickname = client.getNickname();
 		if (!oldNickname.empty())
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
 		client.setNickname(nickname);
@@ -359,7 +366,7 @@ std::vector<Client>::iterator Server::getClient(int fd)
 		if (it->getFd() == fd)
 			return it;
 	}
-	throw std::runtime_error("Client not found");
+	return(clients.end());
 }
 
 bool Server::isValidNickname(const std::string& nickname)
@@ -422,6 +429,8 @@ void Server::handleChannel(int fd, const std::string& message)
 void Server::joinChannel(int fd, const std::string& channelName, const std::string& key)
 {
 	std::vector<Client>::iterator iter = getClient(fd);
+	if (iter == clients.end())
+		throw std::runtime_error("Error finding client\n");
 	Client& client = (*this)[iter];
 	if (client.getUserAuthen() == false)
 		return ;
@@ -483,6 +492,8 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	for (std::vector<int>::iterator it = clientList.begin(); it != clientList.end(); ++it)
 	{
 		std::vector<Client>::iterator bt = getClient(*it);
+		if (bt == clients.end())
+			throw std::runtime_error("Error finding clients\n");
 		Client& user = (*this)[bt];
 		std::string msg = std::string(YEL) + "353 " + client.getNickname() + " = " + channelName + " :" +  user.getNickname() + "\r\n" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0); 
@@ -519,3 +530,73 @@ Client& Server::operator[](std::vector<Client>::iterator it)
 		throw std::out_of_range("Iterator out of range for clients vector");
 	return *it;
 }
+
+
+void Server::processPrivmsg(int fd, const std::string& message)
+{
+	std::vector<Client>::iterator bt = getClient(fd);
+	if (bt == clients.end())
+		throw std::runtime_error("Error finding client\n");
+	Client& sender = (*this)[bt];
+	size_t spacePos = message.find(' ');  // Find the first space to separate target and message content
+	if (spacePos == std::string::npos)
+	{
+		std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
+		send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
+		return;
+	}
+	std::string target = message.substr(0, spacePos); // The target can be a user or a channel
+	std::string text = message.substr(spacePos + 1); // The message to send
+	// Check if the message is empty (ERR_NOTEXTTOSEND)
+	if (text.empty())
+	{
+		std::string error = std::string(RED) + "412: No text to send\r\n" + std::string(WHI);
+		send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
+		return;
+	}
+	if (target[0] == '#')
+	{
+		std::map<std::string, Channel>::iterator it = channels.find(target);
+		if (it == channels.end())
+		{
+			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
+			return;
+		}
+		// Check if the user is banned or not allowed in the channel
+		Channel& channel = it->second;
+		if (channel.isBanned(sender.getNickname()))
+		{
+			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
+			return;
+		}
+		// Send the message to the channel members
+		channel.broadcastToChannel(text);
+	} else
+	{
+		std::vector<Client>::iterator ct = getClientUsingNickname(target);
+		if (ct == clients.end())
+		{
+			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI);
+            send(fd, error.c_str(), error.size(), 0); // ERR_NOSUCHNICK
+		}
+		Client& recepient = (*this)[ct];
+        // Send the private message to the user
+        std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
+        send(recepient.getFd(), response.c_str(), response.size(), 0);
+    }
+}
+
+// // Helper methods for getting client and checking channels
+std::vector<Client>::iterator Server::getClientUsingNickname(const std::string& nickname)
+{
+	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
+		std::string clientsNick = it->getNickname();
+		if (clientsNick.compare(nickname) == 0)
+			return it;
+	}
+	return (clients.end());
+}
+
