@@ -163,7 +163,8 @@ void Server::serverInit(int port, std::string pass)
 			throw(std::runtime_error("poll() faild"));
 
 		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors
-			if (fds[i].revents & POLLIN){ //-> check if there is data to read
+			if (fds[i].revents & POLLIN)
+			{ //-> check if there is data to read
 				if (fds[i].fd == serSocketFd)
 					acceptNewClient(); //-> accept new client
 				else
@@ -578,10 +579,9 @@ void Server::processPrivmsg(int fd, const std::string& message)
 	// std::cout << GRE 
 	if (target[0] == '#')
 	{
-		std::string trimmedTarget = trim(target);
 		// std::cout << " - " << it->first << std::endl;
 		// std::cout << GRE << "Successfully enter here\n" << std::endl;
-		std::map<std::string, Channel>::iterator it = channels.find(trimmedTarget);
+		std::map<std::string, Channel>::iterator it = channels.find(target);
 		if (it == channels.end())
 		{
 			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
