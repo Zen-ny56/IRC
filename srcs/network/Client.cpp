@@ -1,8 +1,6 @@
 #include "../../include/Client.hpp"
 
-Client::Client() :passAuthen(false), userAuthen(false), nickAuthen(false), userName("default"), realName("default")
-{
-}
+Client::Client() :passAuthen(false), userAuthen(false), nickAuthen(false), userName("default"), realName("default"){}
 
 int Client::getFd(){return fd;}
 

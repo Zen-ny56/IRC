@@ -12,7 +12,6 @@ void Server::clearClients(int fd)
 		if (clients[i].getFd() == fd)
 			{clients.erase(clients.begin() + i); break;}
 	}
-
 }
 
 bool Server::signal = false; //-> initialize the static boolean
