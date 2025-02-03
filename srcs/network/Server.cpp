@@ -164,7 +164,8 @@ void Server::serverInit(int port, std::string pass)
 			throw(std::runtime_error("poll() faild"));
 
 		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors
-			if (fds[i].revents & POLLIN){ //-> check if there is data to read
+			if (fds[i].revents & POLLIN)
+			{ //-> check if there is data to read
 				if (fds[i].fd == serSocketFd)
 					acceptNewClient(); //-> accept new client
 				else
@@ -407,7 +408,6 @@ void Server::handleChannel(int fd, const std::string& message)
 	size_t spacePos = params.find(' ');
 	std::string channelsPart = params.substr(0, spacePos); // Comma-separated channel names
 	std::string keysPart = (spacePos != std::string::npos) ? params.substr(spacePos + 1) : ""; // Comma-separated keys
-
 	// Parse channels and keys
 	std::vector<std::string> channels = splitByDelimiter(channelsPart, ',');
 	std::vector<std::string> keys = splitByDelimiter(keysPart, ',');
@@ -423,7 +423,6 @@ void Server::handleChannel(int fd, const std::string& message)
 			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
 			continue;
 		}
-		std::cout << GRE << channelName << std::endl;
 		joinChannel(fd, channelName, key);
     }
 }
@@ -509,9 +508,9 @@ std::vector<std::string> Server::splitByDelimiter(const std::string& str, char d
 	std::vector<std::string> result;
 	std::stringstream ss(str);
 	std::string item;
-
 	while (std::getline(ss, item, delimiter))
 	{
+		item = trim(item);
 		if (!item.empty())
 			result.push_back(item);
 	}
@@ -546,7 +545,6 @@ void Server::processPrivmsg(int fd, const std::string& message)
         send(fd, error.c_str(), error.size(), 0); // ERR_UNKNOWNCOMMAND
         return;
     }
-
     // Skip the "PRIVMSG" part
     size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
     size_t spacePos = message.find(' ', targetStart); // Find space after target
@@ -556,10 +554,8 @@ void Server::processPrivmsg(int fd, const std::string& message)
         send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
         return;
     }
-
     // Extract the target
     std::string target = message.substr(targetStart, spacePos - targetStart);
-
     // Skip any spaces after the target and check for message text
     size_t textStart = message.find_first_not_of(' ', spacePos + 1);
     if (textStart == std::string::npos) {
@@ -568,21 +564,11 @@ void Server::processPrivmsg(int fd, const std::string& message)
         send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
         return;
     }
-
     // Extract the actual message text
     std::string text = message.substr(textStart);
-
-    // Debugging output to confirm parsing (remove in production)
-    std::cout << "Parsed Target: " << "-" << target << "-" << "\n";
-    std::cout << "Parsed Text: " << text << "-" <<  "\n";
-
-	// std::cout << GRE 
 	if (target[0] == '#')
 	{
-		std::string trimmedTarget = trim(target);
-		// std::cout << " - " << it->first << std::endl;
-		// std::cout << GRE << "Successfully enter here\n" << std::endl;
-		std::map<std::string, Channel>::iterator it = channels.find(trimmedTarget);
+		std::map<std::string, Channel>::iterator it = channels.find(target);
 		if (it == channels.end())
 		{
 			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
@@ -591,7 +577,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		}
 		// Check if the user is banned or not allowed in the channel
 		Channel& channel = it->second;
-		if (channel.isBanned(sender.getNickname()))
+		if (!channel.isInChannel(fd) || channel.isBanned(sender.getNickname()))
 		{
 			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
@@ -599,7 +585,9 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		}
 		// Send the message to the channel members
 		channel.broadcastToChannel(text);
-	} else
+		}
+		// std::map<std::string, Channel>::iterator it = channels.find(target);
+	/*}*/ else
 	{
 		std::vector<Client>::iterator ct = getClientUsingNickname(target);
 		if (ct == clients.end())
@@ -628,8 +616,9 @@ std::vector<Client>::iterator Server::getClientUsingNickname(const std::string& 
 }
 
 
-std::string Server::trim(const std::string& str) {
-    size_t start = str.find_first_not_of(" \t");
-    size_t end = str.find_last_not_of(" \t");
+std::string Server::trim(const std::string& str)
+{
+    size_t start = str.find_first_not_of("\r\n\t");
+    size_t end = str.find_last_not_of("\r\n\t");
     return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
 }
