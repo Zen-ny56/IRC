@@ -1,16 +1,10 @@
-#include "Channel.hpp"
+#include "../../include/Channel.hpp"
 
-Channel::Channel()
-{
-}
+Channel::Channel(){}
 
-Channel::~Channel()
-{
-}
+Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX)
-{
-}
+Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX){}
 
 Channel& Channel::operator=(const Channel& other)
 {

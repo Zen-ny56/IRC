@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "../../include/Server.hpp"
 
 Server::Server(){serSocketFd = -1;}
 
@@ -157,9 +157,10 @@ void Server::serverInit(int port, std::string pass)
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Waiting to accept a connection...\n";
 
-	while (Server::signal == false){ //-> run the server until the signal is received
+	while (Server::signal == false)
+	{ //-> run the server until the signal is received
 
-		if((poll(&fds[0],fds.size(),-1) == -1) && Server::signal == false) //-> wait for an event
+		if ((poll(&fds[0],fds.size(),-1) == -1) && Server::signal == false) //-> wait for an event
 			throw(std::runtime_error("poll() faild"));
 
 		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors

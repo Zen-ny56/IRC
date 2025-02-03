@@ -1,4 +1,4 @@
-#include "Client.hpp"
+#include "../../include/Client.hpp"
 
 Client::Client() :passAuthen(false), userAuthen(false), nickAuthen(false), userName("default"), realName("default")
 {

@@ -12,6 +12,9 @@
 #include <poll.h> //-> for poll()
 #include <csignal> //-> for signal()
 #include <map>
+#include <cstdlib> //-> for std::atoi()
+#include <cstring> //-> for memset()
+#include <climits> //-> for INT_MAX
 #include "Client.hpp" //-> for the class Client
 #include "Channel.hpp"
 //-------------------------------------------------------//
