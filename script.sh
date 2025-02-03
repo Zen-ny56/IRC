@@ -4,5 +4,5 @@ if git status | grep -w "modified" > /dev/null; then
         echo .vscode found and removed successfully;
     fi
     git add .; git commit -m "Updated"; git push;
-    echo \e[1;32m File successfully git push;
+    echo //// File successfully git push;
 fi
