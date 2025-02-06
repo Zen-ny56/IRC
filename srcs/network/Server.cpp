@@ -35,6 +35,14 @@ void	Server::closeFds()
 	}
 }
 
+void Server::printSize(int size)
+{
+	std::cout << std::setw(18);
+	for (int i = 0; i < size; i++)
+		std::cout << "-";
+	std::cout << std::endl;
+}
+
 void Server::receiveNewData(int fd)
 {
 	char buff[1024]; //-> buffer for the received data
@@ -50,6 +58,7 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
+		printSize(message.length());
 		if (message.find("CAP LS") != std::string::npos)
 			sendCapabilities(fd);
 		else if (message.rfind("PASS ", 0) == 0)
@@ -72,20 +81,8 @@ void Server::receiveNewData(int fd)
 			capEnd(fd);
 		else
 			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
+		printSize(message.length());
 	}
-}
-
-void Server::processQuit(int fd, const std::string& reason) 
-{
-    std::string nickname = clients[fd].getNickname();
-	// Compose the QUIT message
-	std::string quitMessage = ":" + nickname + " QUIT :Quit: " + (reason.empty() ? "" : reason);
-	// Notify all clients sharing channels with the quitting client
-	// broadcastToSharedChannels(fd, quitMessage); // Assume this function broadcasts to all relevant clients
-    // std::string errorMessage = "ERROR :Closing link (" + nickname + ") [Quit: " + reason + "]";
-	// send(fd, quitMessage.c_str(), quitMessage.size(), 0);
-    // Remove the client from the server
-    disconnectClient(fd); // Assume this function handles removing the client from all data structures and closing the connection
 }
 
 void Server::disconnectClient(int fd)
@@ -175,106 +172,6 @@ void Server::serverInit(int port, std::string pass)
 	closeFds(); //-> close the file descriptors when the server stops
 }
 
-void Server::sendCapabilities(int fd)
-{
-	std::string capMessage = "CAP * LS :multi-prefix sasl\r\n";
-	send(fd, capMessage.c_str(), capMessage.size(), 0);
-}
-
-void Server::processCapReq(int fd, const std::string& message)
-{
-	if (message.find("CAP REQ") != std::string::npos){
-		std::string capAck = "CAP * ACK :multi-prefix sasl\r\n";
-		send(fd, capAck.c_str(), capAck.size(), 0);
-	}
-}
-
-void Server::validatePassword(int fd, const std::string& message)
-{
-	if (message.rfind("PASS", 0) == 0)
-	{ // Check if message starts with "PASS"
-		std::vector<Client>::iterator it = getClient(fd);
-		if (it == clients.end())
-			throw std::runtime_error("No client was found\n");
-		Client& client = (*this)[it];
-		std::string receivedPassword = message.substr(5); // Extract password
-		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
-		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
-		if (client.getPassAuthen() == true)
-		{
-			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
-			send(fd, errMsg.c_str(), errMsg.size(), 0);
-			return ;
-		}
-		if (receivedPassword.empty())
-		{
-			std::string errMsg = std::string(RED) + "461 PASS :Not enough parameters\r\n" + std::string(WHI);
-			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-			return ;
-		}
-		if (receivedPassword.compare(this->password) == 0)
-		{
-			client.setPassAuthen();
-			return ; // Authentication successful
-		} 
-		else
-        {
-			std::string errMsg = std::string(RED) + "464 :Password incorrect\r\n" + std::string(WHI);
-			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
-			return ;
-        }
-	}
-	return ; // Authentication failed
-}
-
-void Server::processUser(int fd, const std::string& message)
-{
-	// Split the message into parts
-	std::vector<Client>::iterator it = getClient(fd);
-	if (it == clients.end())
-		throw std::runtime_error("Client was not found]\n");
-	Client& client = (*this)[it];
-	if (client.getNickAuthen() == false || client.getPassAuthen() == false)
-	{
-		std::cout << RED << "Entering Here" << WHI << std::endl;
-		return ;
-	}
-	std::istringstream iss(message);
-	std::vector<std::string> parts;
-	std::string part;
-	while (std::getline(iss, part, ' '))
-        parts.push_back(part);
-    // Check minimum parameter count
-    if (parts.size() < 5 || parts[0] != "USER")
-	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-		return;
-	}
-	std::string username = parts[1];
-	std::string unused1 = parts[2]; // This is usually "0"
-	std::string unused2 = parts[3]; // This is usually "*"
-	std::string realname = message.substr(message.find(':') + 1);
-
-	// Check if the user is already registered
-	if (client.getUserAuthen() == true)
-	{
-		std::string errMsg = std::string(RED) + "462 :You may not register\r\n" + std::string(WHI);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_ALREADYREGISTERED
-		return;
-	}
-	if (username.empty() || realname.empty())
-	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-		return;
-	}
-	// Register the user
-	client.setUserName(username, realname);
-	// Log successful processing
-	this->sendWelcome(fd, client);
-}
-
 void Server::sendWelcome(int fd, Client& client)
 {
 	// 1. RPL_WELCOME (001)
@@ -292,72 +189,6 @@ void Server::sendWelcome(int fd, Client& client)
 	// 4. RPL_MYINFO (004)
 	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + client.getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n" + std::string(WHI);
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
-}
-
-void Server::processNickUser(int fd, const std::string& message)
-{
-	// NICK command
-	if (message.rfind("NICK ", 0) == 0)
-	{
-		std::vector<Client>::iterator it = getClient(fd);
-		if (it == clients.end())
-			throw  std::runtime_error("Client was not found\n");
-		Client& client = (*this)[it];
-		if (client.getPassAuthen() == false || client.getNickAuthen() == true)
-			return;
-		std::string nickname = message.substr(5); // Extract nickname
-		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
-		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
-		if (nickname.empty())
-		{
-			std::string errorMsg = std::string(RED) + "431 :No nickname given" + "\r\n" + std::string(WHI);
-            send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
-			return;
-		}
-		if (!isValidNickname(nickname))
-		{
-            std::string errorMsg = std::string(RED) + "432 " + nickname + " :Erroneous nickname" + "\r\n" + std::string(WHI); // ERR_ERRONEUSNICKNAME
-			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
-			return;
-		}
-		if (nicknameMap.find(nickname) != nicknameMap.end())
-		{
- 			std::string errorMsg = std::string(RED) + "433 " + nickname + " :Nickname is already in use\r\n" + std::string(WHI); // ERR_NICKNAMEINUSE
-			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
-			return;
-		}
-		// Update client's nickname
-		// Client& client = getClient(fd);
-		std::string oldNickname = client.getNickname();
-		if (!oldNickname.empty())
-			nicknameMap.erase(oldNickname); // Remove old nickname from the map
-		client.setNickname(nickname);
-		nicknameMap[nickname] = fd; // Add the new nickname to the map
-		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() +  "\r\n" + std::string(WHI); // Inform the client of the nickname change
-		send(fd, response.c_str(), response.length(), 0);
-		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
-	}
-}
-
-void Server::processSasl(int fd, const std::string& message)
-{
-	if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
-	{
-		std::string response = "AUTHENTICATE +\r\n";
-		send(fd, response.c_str(), response.size(), 0);
-    } else if (message.find("AUTHENTICATE ") == 0) {
-		// Decode and validate credentials
-		std::string credentials = message.substr(13); // Base64-encoded
-		// Decode and verify (requires base64 decoding)
-		// Example: Validate "username\0username\0password"
-		send(fd, "900 :Authentication successful\r\n", 33, 0);
-	}
-}
-
-void Server::capEnd(int fd)
-{
-	std::string capEnd = "CAP END\r\n";
-	send(fd, capEnd.c_str(), capEnd.size(), 0);
 }
 
 std::vector<Client>::iterator Server::getClient(int fd)
@@ -392,116 +223,6 @@ bool Server::isValidNickname(const std::string& nickname)
 	return true;
 }
 
-void Server::handleChannel(int fd, const std::string& message)
-{
-	//Extract parameters after JOIN , client is going to send JOIN #channel1,#channel2 key1,key2 or JOIN #channel1
-	size_t paramsStart = message.find(' ') + 1;
-    if (paramsStart == std::string::npos || paramsStart >= message.length())
-	{
-		std::string errormsg = std::string(RED) + "461 JOIN :Not enough parameters\r\n";
-		send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
-		return;
-	}
-	std::string params = message.substr(paramsStart);
-	// Split channels and keys
-	size_t spacePos = params.find(' ');
-	std::string channelsPart = params.substr(0, spacePos); // Comma-separated channel names
-	std::string keysPart = (spacePos != std::string::npos) ? params.substr(spacePos + 1) : ""; // Comma-separated keys
-	// Parse channels and keys
-	std::vector<std::string> channels = splitByDelimiter(channelsPart, ',');
-	std::vector<std::string> keys = splitByDelimiter(keysPart, ',');
-
-	//Iterate through each channel and call joinChannel
-	for (size_t i = 0; i < channels.size(); ++i)
-	{
-		const std::string& channelName = channels[i];
-		const std::string& key = (i < keys.size()) ? keys[i] : ""; // Match keys to channels if possible
-        if (!isValidChannelName(channelName))
-		{
-			std::string errormsg = std::string(RED) + "476 " + channelName + " :Invalid channel name\r\n";
-			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
-			continue;
-		}
-		joinChannel(fd, channelName, key);
-    }
-}
-
-void Server::joinChannel(int fd, const std::string& channelName, const std::string& key)
-{
-	std::vector<Client>::iterator iter = getClient(fd);
-	if (iter == clients.end())
-		throw std::runtime_error("Error finding client\n");
-	Client& client = (*this)[iter];
-	if (client.getUserAuthen() == false)
-		return ;
-	std::map<std::string, Channel>::iterator it = channels.find(channelName);
-	if (it == channels.end())
-	{
-		// Channel doesn't exist, so create it
-		channels[channelName] = Channel(channelName, key);
-		it = channels.find(channelName); // Re-get the iterator after creation
-	}
-	Channel& channel = it->second;
-	if (channel.isInChannel(fd))
-		return ;
-    // 3. Validate conditions for joining the channel
-	if (channel.isInviteOnly() && !channel.isInvited(fd))
-	{
-		std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
-		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-		return;
-    }
-    if (channel.isFull())
-	{
-		std::string errorMsg = std::string(RED) + client.getNickname() + " " + channelName + " :Channel is full\r\n" + std::string(WHI);
-		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-		return;
-	}
-	if (!channel.getKey().empty() && channel.getKey() != key)
-	{
-		std::string errorMsg = std::string(RED) + "475" + client.getNickname() + " :Incorrrect channel key\r\n" + std::string(WHI);
-		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-		return;
-    }
-	if (channel.isBanned(client.getNickname()))
-	{
-		std::string errorMsg = std::string(RED) + "474" + client.getNickname() + " :You are banned from this channel\r\n" + std::string(WHI);
-        send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-        return;
-    }
-	
-	// 4. Add the client to the channel
-	channel.addClient(fd);
-	
-	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
-	channel.broadcastToChannel(joinMessage);
-
-    // 6. Send the channel topic (or indicate no topic set)
-    if (!channel.getTopic().empty())
-	{
-		std::string info = std::string(YEL) + "332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n" + std::string(WHI);
-		send(fd, info.c_str() ,info.size(), 0);
-	} else {
-		std::string info = std::string(YEL) + "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n" + std::string(WHI);
-		send(fd, info.c_str(), info.size(), 0);
-    }
-
-    // 7. Send the list of users in the channel
-	std::vector<int> clientList = channel.listUsers();
-	for (std::vector<int>::iterator it = clientList.begin(); it != clientList.end(); ++it)
-	{
-		std::vector<Client>::iterator bt = getClient(*it);
-		if (bt == clients.end())
-			throw std::runtime_error("Error finding clients\n");
-		Client& user = (*this)[bt];
-		std::string msg = std::string(YEL) + "353 " + client.getNickname() + " = " + channelName + " :" +  user.getNickname() + "\r\n" + std::string(WHI);
-		send(fd, msg.c_str(), msg.size(), 0); 
-	}
-	std::string msg = std::string(YEL) + "366 " + client.getNickname() + " " + channelName + " :End of /Names list\r\n" + std::string(WHI);
-    send(fd, msg.c_str(), msg.size(), 0);
-}
-
 std::vector<std::string> Server::splitByDelimiter(const std::string& str, char delimiter)
 {
 	std::vector<std::string> result;
@@ -529,77 +250,6 @@ Client& Server::operator[](std::vector<Client>::iterator it)
 	if (it == clients.end())
 		throw std::out_of_range("Iterator out of range for clients vector");
 	return *it;
-}
-
-
-void Server::processPrivmsg(int fd, const std::string& message)
-{
-	std::vector<Client>::iterator bt = getClient(fd);
-	if (bt == clients.end())
-		throw std::runtime_error("Error finding client\n");
-	Client& sender = (*this)[bt];
-    size_t commandEnd = message.find(' ');
-    if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
-        std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
-        send(fd, error.c_str(), error.size(), 0); // ERR_UNKNOWNCOMMAND
-        return;
-    }
-    // Skip the "PRIVMSG" part
-    size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
-    size_t spacePos = message.find(' ', targetStart); // Find space after target
-    if (spacePos == std::string::npos) {
-        // If there's no space after the target, no message text is provided
-        std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
-        send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
-        return;
-    }
-    // Extract the target
-    std::string target = message.substr(targetStart, spacePos - targetStart);
-    // Skip any spaces after the target and check for message text
-    size_t textStart = message.find_first_not_of(' ', spacePos + 1);
-    if (textStart == std::string::npos) {
-        // If no text is found after the target, return an error
-        std::string error = std::string(RED) + "412: No text to send\r\n" + std::string(WHI);
-        send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
-        return;
-    }
-    // Extract the actual message text
-    std::string text = message.substr(textStart);
-	if (target[0] == '#')
-	{
-		std::map<std::string, Channel>::iterator it = channels.find(target);
-		if (it == channels.end())
-		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
-			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
-			return;
-		}
-		// Check if the user is banned or not allowed in the channel
-		Channel& channel = it->second;
-		if (!channel.isInChannel(fd) || channel.isBanned(sender.getNickname()))
-		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
-			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
-			return;
-		}
-		// Send the message to the channel members
-		channel.broadcastToChannel(text);
-		}
-		// std::map<std::string, Channel>::iterator it = channels.find(target);
-	/*}*/ else
-	{
-		std::vector<Client>::iterator ct = getClientUsingNickname(target);
-		if (ct == clients.end())
-		{
-			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI);
-            send(fd, error.c_str(), error.size(), 0); // ERR_NOSUCHNICK
-			return ;
-		}
-		Client& recepient = (*this)[ct];
-        // Send the private message to the user
-        std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
-        send(recepient.getFd(), response.c_str(), response.size(), 0);
-    } 
 }
 
 // // Helper methods for getting client and checking channels

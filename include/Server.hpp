@@ -15,6 +15,7 @@
 #include <cstdlib> //-> for std::atoi()
 #include <cstring> //-> for memset()
 #include <climits> //-> for INT_MAX
+#include <iomanip> //-> for design manipulations
 #include "Client.hpp" //-> for the class Client
 #include "Channel.hpp"
 //-------------------------------------------------------//
@@ -48,6 +49,7 @@ class Server //-> class for server
         void closeFds(); //-> close file descriptors
         void clearClients(int fd); //-> clear clients
         void sendCapabilities(int fd);
+        void printSize(int size); //-> for printing dotted lines for visualization.
         void processCapReq(int fd, const std::string& message);
         void markPasswordAccepted(int fd);
         void validatePassword(int fd, const std::string& message);
