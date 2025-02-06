@@ -63,7 +63,7 @@ void Server::receiveNewData(int fd)
 		else if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
 		else if (message.find("JOIN", 0) == 0)
-			handleChannel(fd, message);
+			handleChannel(fd, message); /*Function where JOIN is handled*/
 		else if (message.find("PRIVMSG", 0) == 0)
 			processPrivmsg(fd, message);
 		else if (message.find("AUTHENTICATE") != std::string::npos)
@@ -426,6 +426,7 @@ void Server::handleChannel(int fd, const std::string& message)
     }
 }
 
+/*Initial parsing is done and we're joining a channel*/
 void Server::joinChannel(int fd, const std::string& channelName, const std::string& key)
 {
 	std::vector<Client>::iterator iter = getClient(fd);
