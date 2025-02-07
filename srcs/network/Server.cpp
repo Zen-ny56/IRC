@@ -35,14 +35,6 @@ void	Server::closeFds()
 	}
 }
 
-void Server::printSize(int size)
-{
-	std::cout << std::setw(18);
-	for (int i = 0; i < size; i++)
-		std::cout << "-";
-	std::cout << std::endl;
-}
-
 void Server::receiveNewData(int fd)
 {
 	char buff[1024]; //-> buffer for the received data
@@ -58,7 +50,6 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
-		printSize(message.length());
 		if (message.find("CAP LS") != std::string::npos)
 			sendCapabilities(fd);
 		else if (message.rfind("PASS ", 0) == 0)
@@ -80,8 +71,15 @@ void Server::receiveNewData(int fd)
 		else if (message.find("CAP END") != std::string::npos)
 			capEnd(fd);
 		else
-			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
-		printSize(message.length());
+		{	
+			if (message.length() > 0)
+			{
+				std::cout << "\033[?12h"; // Enable blinking cursor
+				std::cout << "Typed : Command Unkown. " << message;
+    			std::cout << "\033[?12l";
+			}
+			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
+		}
 	}
 }
 
