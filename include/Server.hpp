@@ -15,6 +15,7 @@
 #include <cstdlib> //-> for std::atoi()
 #include <cstring> //-> for memset()
 #include <climits> //-> for INT_MAX
+#include <iomanip> //-> for design manipulations
 #include "Client.hpp" //-> for the class Client
 #include "Channel.hpp"
 //-------------------------------------------------------//
