@@ -26,11 +26,15 @@ void Server::handleChannel(int fd, const std::string& message)
 		const std::string& key = (i < keys.size()) ? keys[i] : ""; // Match keys to channels if possible
         if (!isValidChannelName(channelName))
 		{
-			std::string errormsg = std::string(RED) + "476 " + channelName + " :Invalid channel name\r\n";
+			std::string errormsg = std::string(RED) + "476 " + channelName + " :Invalid channel name" + std::string(EN) + "\r\n";
 			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
 			continue;
 		}
-		joinChannel(fd, channelName, key);
+		else
+		{
+			joinChannel(fd, channelName, key);
+			std::cout << GRE <<std::setw(15) <<"|-- Succesfully joined Channel: " << channelName << EN << std::endl;
+		}
     }
 }
 
@@ -106,6 +110,6 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 		std::string msg = std::string(YEL) + "353 " + client.getNickname() + " = " + channelName + " :" +  user.getNickname() + "\r\n" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0); 
 	}
-	std::string msg = std::string(YEL) + "366 " + client.getNickname() + " " + channelName + " :End of /Names list\r\n" + std::string(WHI);
+	std::string msg = std::string(YEL) + "366 " + client.getNickname() + " " + channelName + " :End of /Names list\r\n" + std::string(WHI) ;
     send(fd, msg.c_str(), msg.size(), 0);
 }
