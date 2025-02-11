@@ -58,6 +58,12 @@ void Server::receiveNewData(int fd)
 			processNickUser(fd, message);
 		else if (message.rfind("USER ", 0) == 0)
 			processUser(fd, message);
+		else if (message.rfind("KICK ", 0) == 0)
+			std::cout << fd << message << "Kicking from here" << std::endl;
+		else if (message.rfind("TOPIC ", 0) == 0)
+			std::cout << fd << "changing topic from here to: " << message << std::endl;
+		else if (message.rfind("INVITE ", 0) == 0)
+			std::cout << fd << message << "Inviting from here" << std::endl;
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
 		else if (message.find("QUIT", 0) == 0)
