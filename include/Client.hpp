@@ -5,9 +5,9 @@
 class Client //-> class for client
 {
 private:
-	bool	passAuthen;
-	bool	userAuthen;
-	bool	nickAuthen;
+	bool		passAuthen;
+	bool		userAuthen;
+	bool		nickAuthen;
 	std::string userName;
 	std::string realName;
 	int fd; //-> client file descriptor
