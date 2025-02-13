@@ -104,3 +104,64 @@ std::vector<int> Channel::listUsers()
 	}
 	return(temp);
 }
+
+//new functions
+void Channel::broadcast(const std::string& message)
+{
+    clientIterate start = _clients.begin();
+	clientIterate end = _clients.end();
+
+	while(start != end)
+	{
+		(*start)->write(message);
+		start++;
+	}
+}
+
+void Channel::broadcast(const std::string& message, Client* exclude)
+{
+	clientIterate start = _clients.begin();
+    clientIterate end = _clients.end();
+
+    while(start!= end)
+    {
+        if (*start == exclude)
+		{
+			start++;
+			continue;
+		}
+        (*start)->write(message);
+        start++;
+    }
+}
+
+void   Channel::removeClient(Client *client)
+{
+	clientIterate start = _clients.begin();
+	clientIterate end = _clients.end();
+
+	while(start!= end)
+	{
+		if (*start == client)
+        {
+            _clients.erase(start);
+            return;
+        }
+        start++;
+	}
+	client->set_channel(NULL);
+	if (client == _admin)
+    {
+        _admin = *(_clients.begin());
+
+        std::string message = client->getNickname() + " is now the admin of the channel ";
+    }
+}
+
+void   Channel::kick(Client* client, Client* target, const std::string& reason)
+{
+	std::cout << client->getNickname() << " " << " in " << channelName << " kicked " << target->getNickname() << " for reason of : " << reason;
+	this->removeClient(target);
+	std::string message = client->getNickname() + " kicked " + target->getNickname() + " from channel ";
+	std::cout << message << std::endl;
+}

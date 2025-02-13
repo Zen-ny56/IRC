@@ -34,3 +34,12 @@ bool Client::getPassAuthen(){return this->passAuthen;}
 std::string Client::getNickname(){return this->nickName;}
 
 std::string Client::getUserName(){return this->userName;}
+
+void Client::write(const std::string& message)
+{
+	std::string buff = message + "\r\n";
+	if (send(fd, buff.c_str(), buff.size(), 0) <= -1)
+		throw std::runtime_error("Error occurred while sending");
+}
+
+void 	Client::set_channel(Channel *channel){_channel = channel;}

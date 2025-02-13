@@ -5,13 +5,16 @@
 
 class Channel
 {
+	typedef std::vector<Client *>::iterator clientIterate;
 	private:
 		// std::map<char, bool> modes;
 		const std::string channelName;
 		std::string key;
+		Client*    	_admin;
 		std::string topic;
 		bool inviteOnly;
 		int max;
+		std::vector<Client *> _clients;
 		std::vector<int> clientFds;
 		std::map<int, bool> _isInvited;
 		std::vector<std::string> _isBanned;
@@ -35,4 +38,14 @@ class Channel
 		std::vector<int> listUsers();
 		void setTopic(const std::string& topic);
 		int isInviteOnly();
+		//new functions
+		void   broadcast(const std::string& message);
+		void   broadcast(const std::string& message, Client * exclude);
+		void   kick(Client* client, Client* target, const std::string& reason);
+		void   removeClient(Client *client);
+
+
+
+
+
 };
