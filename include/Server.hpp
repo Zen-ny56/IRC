@@ -47,7 +47,7 @@ class Server //-> class for server
         void receiveNewData(int fd); //-> receive new data from a registered client
         static void signalHandler(int signum); //-> signal handler
         void closeFds(); //-> close file descriptors
-        void clearClients(int fd); //-> clear clients
+        void clearClients(int fd); //->            clear clients
         void sendCapabilities(int fd);
         void processCapReq(int fd, const std::string& message);
         void markPasswordAccepted(int fd);
@@ -69,6 +69,5 @@ class Server //-> class for server
         void processPrivmsg(int fd, const std::string& message);
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
         std::string trim(const std::string& str);
- 
 };
   
