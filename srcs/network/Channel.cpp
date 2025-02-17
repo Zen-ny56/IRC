@@ -1,10 +1,13 @@
 #include "../../include/Channel.hpp"
+#include "../../include/Server.hpp"
 
-Channel::Channel(){}
+Channel::Channel() : topic("*"){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX){}
+Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic("*"), inviteOnly(false), max(INT_MAX){}
+
+Channel::Channel(const Channel& other) : channelName(other.channelName), topic(other.topic){}
 
 Channel& Channel::operator=(const Channel& other)
 {
@@ -13,7 +16,7 @@ Channel& Channel::operator=(const Channel& other)
 		// Assign each member variable
 		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
 		this->key = other.key;                 // key is also const and cannot be reassigned
-		this->topic = other.topic;
+		this->topic = other.topic; 
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
 		this->clientFds = other.clientFds;
@@ -106,62 +109,63 @@ std::vector<int> Channel::listUsers()
 }
 
 //new functions
-void Channel::broadcast(const std::string& message)
+// void Channel::broadcast(const std::string& message)
+// {
+//     clientIterate start = _clients.begin();
+// 	clientIterate end = _clients.end();
+
+// 	while(start != end)
+// 	{
+// 		(*start)->write(message);
+// 		start++;
+// 	}
+// }
+
+// void Channel::broadcast(const std::string& message, Client* exclude)
+// {
+// 	clientIterate start = _clients.begin();
+//     clientIterate end = _clients.end();
+
+//     while(start!= end)
+//     {
+//         if (*start == exclude)
+// 		{
+// 			start++;
+// 			continue;
+// 		}
+//         (*start)->write(message);
+//         start++;
+//     }
+// }
+
+// void   Channel::removeClient(Client * client)
+// {
+// 	clientIterate start = _clients.begin();
+// 	clientIterate  end = _clients.end();
+
+// 	while(start!= end)
+// 	{
+// 		if (*start == client)
+//         {
+//             _clients.erase(start);
+//             return;
+//         }
+//         start++;
+// 	}
+// 	client->set_channel(NULL);
+// 	if (client == _admin)
+//     {
+//         _admin = *(_clients.begin());
+
+//         std::string message = client->getNickname() + " is now the admin of the channel ";
+//     }
+// }
+
+void   Server::kick(Client* client, Client* target, const std::string& reason)
 {
-    clientIterate start = _clients.begin();
-	clientIterate end = _clients.end();
-
-	while(start != end)
-	{
-		(*start)->write(message);
-		start++;
-	}
-}
-
-void Channel::broadcast(const std::string& message, Client* exclude)
-{
-	clientIterate start = _clients.begin();
-    clientIterate end = _clients.end();
-
-    while(start!= end)
-    {
-        if (*start == exclude)
-		{
-			start++;
-			continue;
-		}
-        (*start)->write(message);
-        start++;
-    }
-}
-
-void   Channel::removeClient(Client *client)
-{
-	clientIterate start = _clients.begin();
-	clientIterate end = _clients.end();
-
-	while(start!= end)
-	{
-		if (*start == client)
-        {
-            _clients.erase(start);
-            return;
-        }
-        start++;
-	}
-	client->set_channel(NULL);
-	if (client == _admin)
-    {
-        _admin = *(_clients.begin());
-
-        std::string message = client->getNickname() + " is now the admin of the channel ";
-    }
-}
-
-void   Channel::kick(Client* client, Client* target, const std::string& reason)
-{
-	std::cout << client->getNickname() << " " << " in " << channelName << " kicked " << target->getNickname() << " for reason of : " << reason;
-	this->removeClient(target);
+	// Channel *obj;
+	std::cout << client->getNickname() << " " << " kicked " << target->getNickname() << " for reason of : " << reason;
+	// obj->removeClient(target);
 	std::string message = client->getNickname() + " kicked " + target->getNickname() + " from channel ";
 	std::cout << message << std::endl;
 }

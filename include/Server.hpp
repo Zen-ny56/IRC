@@ -69,6 +69,10 @@ class Server //-> class for server
         void processPrivmsg(int fd, const std::string& message);
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
         std::string trim(const std::string& str);
- 
+        //new functions
+        void kickCommand(int fd, const std::string& message);
+        bool checkParsing(std::string& input, std::string client, std::string target, std::string message);
+        void  kick(Client* client, Client* target, const std::string& reason);
+        void  topicCommand(int fd, std::string request);
+        void  inviteCommand(int fd, std::string command);
 };
-  

@@ -10,7 +10,7 @@ private:
 	bool		nickAuthen;
 	std::string userName;
 	std::string realName;
-	Channel*     _channel;
+	// Channel*    _channel;
 	int fd; //-> client file descriptor
 	std::string IPadd; //-> client ip address
 	std::string nickName;
@@ -31,6 +31,6 @@ public:
 	std::string getUserName();
 	std::string getNickname();
 	//new functions
-	void 		set_channel(Channel *channel);
+	// void 	set_channel(Channel *channel);
 	void   write(const std::string& message);
 };
