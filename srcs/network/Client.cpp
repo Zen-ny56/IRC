@@ -42,4 +42,4 @@ void Client::write(const std::string& message)
 		throw std::runtime_error("Error occurred while sending");
 }
 
-void 	Client::set_channel(Channel *channel){_channel = channel;}
+// void 	Client::set_channel(Channel *channel){_channel = channel;}
