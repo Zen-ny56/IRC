@@ -1,61 +1,68 @@
 #include "../../include/Server.hpp"
 #include "../../include/Channel.hpp"
 
-void Server::kickCommand(int fd, const std::string& message)
+void Server::kick(Client* client, Client* target, const std::string& reason)
 {
-    // Extract parameters after KICK command
-    size_t spacePos = message.find(' ');
-    if (spacePos == std::string::npos || spacePos + 1 >= message.length())
+    Channel* channel = client->getChannel();
+    if (!channel)
     {
-        std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n";
-        send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
+        client->write("You are not in a channel.\r\n");
         return;
     }
 
-    std::string params = message.substr(spacePos + 1);
-
-    // Split channels and keys
-    size_t nextSpace = params.find(' ');
-    std::string channelsPart = params.substr(0, nextSpace);
-    std::string keysPart = (nextSpace != std::string::npos) ? params.substr(nextSpace + 1) : "";
-
-    std::vector<std::string> channels = splitByDelimiter(channelsPart, ',');
-    std::vector<std::string> keys = splitByDelimiter(keysPart, ',');
-
-    std::vector<std::string> validChannels;
-
-    // Iterate through each channel and validate
-    for (size_t i = 0; i < channels.size(); ++i)
+    if (channel->getAdmin() != client)
     {
-        std::string& input = channels[i];
-        std::string client, target;
-        std::string parsedMessage;
-        const std::string& key = (i < keys.size()) ? keys[i] : ""; // Match keys to channels
-
-        if (!checkParsing(input, client, target, parsedMessage))
-        {
-            std::string errormsg = std::string(RED) + "476 " + input + " :Bad channel mask\r\n";
-            send(fd, errormsg.c_str(), errormsg.size(), 0);
-            continue;
-        }
-
-        validChannels.push_back(input);
+        client->write("You are not the admin of this channel.\r\n");
+        return;
     }
 
+    if (!channel->isInChannel(target->getFd()))
+    {
+        client->write(target->getNickname() + " is not in this channel.\r\n");
+        return;
+    }
+
+    std::string message = ":" + client->getNickname() + " KICK " + channel->getName() + " " + target->getNickname() + " :" + reason + "\r\n";
+    channel->broadcast(message);
+    channel->removeClient(target);
 }
 
-bool Server::checkParsing(std::string& input, std::string client, std::string target, std::string message)
+void Server::kickCommand(int fd, const std::string& message)
 {
-
-    if (input.size() != 4)
+    Client* client = getClientByFd(fd);
+    if (!client)
     {
-        client = input.substr(1);
-        target = input.substr(2);
-        if (!input[3])
-            message = "No reason given";
-        else
-            message = input.substr(3);
-        return true;  
+        send(fd, "ERROR :You are not connected.\r\n", 30, 0);
+        return;
     }
-    return false;
+
+    std::vector<std::string> tokens = split(message, ' ');
+    if (tokens.size() < 3)
+    {
+        std::string errormsg = "461 KICK :Not enough parameters\r\n";
+        send(fd, errormsg.c_str(), errormsg.size(), 0);
+        return;
+    }
+
+    std::string channelName = tokens[1];
+    std::string targetNick = tokens[2];
+    std::string reason = tokens.size() > 3 ? tokens[3] : "No reason given";
+
+    Client* target = getClientByNick(targetNick);
+    if (!target)
+    {
+        std::string errormsg = "401 " + targetNick + " :No such nick/channel\r\n";
+        send(fd, errormsg.c_str(), errormsg.size(), 0);
+        return;
+    }
+
+    Channel* channel = getChannelByName(channelName);
+    if (!channel)
+    {
+        std::string errormsg = "403 " + channelName + " :No such channel\r\n";
+        send(fd, errormsg.c_str(), errormsg.size(), 0);
+        return;
+    }
+
+    kick(client, target, reason);
 }

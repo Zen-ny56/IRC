@@ -1,171 +1,138 @@
-#include "../../include/Channel.hpp"
 #include "../../include/Server.hpp"
+#include "../../include/Channel.hpp"
 
-Channel::Channel() : topic("*"){}
+Channel::Channel() : topic("*") {}
 
-Channel::~Channel(){}
+Channel::~Channel() {}
 
-Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic("*"), inviteOnly(false), max(INT_MAX){}
+Channel::Channel(const std::string& channelName, const std::string& key)
+    : channelName(channelName), key(key), topic("*"), inviteOnly(false), max(INT_MAX) {}
 
-Channel::Channel(const Channel& other) : channelName(other.channelName), topic(other.topic){}
+Channel::Channel(const Channel& other)
+    : channelName(other.channelName), topic(other.topic), inviteOnly(other.inviteOnly), max(other.max),
+      clientFds(other.clientFds), _isInvited(other._isInvited), _isBanned(other._isBanned) {}
 
 Channel& Channel::operator=(const Channel& other)
 {
-	if (this != &other)
-	{
-		// Assign each member variable
-		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
-		this->key = other.key;                 // key is also const and cannot be reassigned
-		this->topic = other.topic; 
-		this->inviteOnly = other.inviteOnly;
-		this->max = other.max;
-		this->clientFds = other.clientFds;
-		this->_isInvited = other._isInvited;
-		this->_isBanned = other._isBanned;
-	}
-	return *this;
+    if (this != &other)
+    {
+        this->key = other.key;
+        this->topic = other.topic;
+        this->inviteOnly = other.inviteOnly;
+        this->max = other.max;
+        this->clientFds = other.clientFds;
+        this->_isInvited = other._isInvited;
+        this->_isBanned = other._isBanned;
+    }
+    return *this;
 }
 
-void Channel::addClient(int fd)
+void Channel::addClient(Client* client)
 {
-	clientFds.push_back(fd);
+    _clients.push_back(client);
+    clientFds.push_back(client->getFd());
 }
 
-void Channel::setKey(const std::string& key){this->key = key;}
+void Channel::setKey(const std::string& key) { this->key = key; }
 
-void Channel::setMax(int max){this->max = max;}
+void Channel::setMax(int max) { this->max = max; }
 
-int Channel::getMax(){return this->max;}
+int Channel::getMax() const { return this->max; }
 
-int Channel::isFull()
+bool Channel::isFull() const
 {
-	int c = 0;
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
-		c++;
-	if (this->getMax() == c)
-		return (1);
-	return (0);
+    return _clients.size() >= static_cast<size_t>(max);
 }
 
-std::string Channel::getKey(){return this->key;}
+std::string Channel::getKey() const { return this->key; }
 
-int Channel::isInviteOnly()
+bool Channel::isInviteOnly() const { return this->inviteOnly; }
+
+bool Channel::isInvited(int fd) const
 {
-	if (this->inviteOnly == false)
-		return (0);
-	return (1);
+    return _isInvited.find(fd) != _isInvited.end() && _isInvited.at(fd);
 }
 
-int Channel::isInvited(int fd)
+bool Channel::isBanned(const std::string& nickName) const
 {
-	if (_isInvited.find(fd) != _isInvited.end())
-	{
-		if (_isInvited[fd] == false)
-			return 1;
-	}
-	return 0;
+    return std::find(_isBanned.begin(), _isBanned.end(), nickName) != _isBanned.end();
 }
 
-int Channel::isBanned(const std::string& nickName)
+bool Channel::isInChannel(int fd) const
 {
-	for (std::vector<std::string>::iterator it = _isBanned.begin(); it != _isBanned.end(); ++it)
-	{
-		if ((*it).compare(nickName) == 0)
-			return (1);
-	}
-	return (0);
-}
-
-int Channel::isInChannel(int fd)
-{
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
-	{
-		if (*it == fd)
-			return (1);
-	}
-	return (0);
+    return std::find(clientFds.begin(), clientFds.end(), fd) != clientFds.end();
 }
 
 void Channel::broadcastToChannel(const std::string& message)
 {
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
-	{
-		send(*it, message.c_str(), message.size(), 0);
-	}
+    for (std::vector<int>::const_iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+    {
+        send(*it, message.c_str(), message.size(), 0);
+    }
 }
 
-std::string Channel::getTopic(){return this->topic;}
+std::string Channel::getTopic() const { return this->topic; }
 
-void Channel::setTopic(const std::string& topic){this->topic = topic;}
+void Channel::setTopic(const std::string& topic) { this->topic = topic; }
 
-std::vector<int> Channel::listUsers()
+std::vector<int> Channel::listUsers() const { return clientFds; }
+
+void Channel::broadcast(const std::string& message)
 {
-	std::vector<int> temp;
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
-	{
-		temp.push_back(*it);
-	}
-	return(temp);
+    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        (*it)->write(message);
+    }
 }
 
-//new functions
-// void Channel::broadcast(const std::string& message)
-// {
-//     clientIterate start = _clients.begin();
-// 	clientIterate end = _clients.end();
+std::string Channel::getName() const{return channelName;}
 
-// 	while(start != end)
-// 	{
-// 		(*start)->write(message);
-// 		start++;
-// 	}
-// }
-
-// void Channel::broadcast(const std::string& message, Client* exclude)
-// {
-// 	clientIterate start = _clients.begin();
-//     clientIterate end = _clients.end();
-
-//     while(start!= end)
-//     {
-//         if (*start == exclude)
-// 		{
-// 			start++;
-// 			continue;
-// 		}
-//         (*start)->write(message);
-//         start++;
-//     }
-// }
-
-// void   Channel::removeClient(Client * client)
-// {
-// 	clientIterate start = _clients.begin();
-// 	clientIterate  end = _clients.end();
-
-// 	while(start!= end)
-// 	{
-// 		if (*start == client)
-//         {
-//             _clients.erase(start);
-//             return;
-//         }
-//         start++;
-// 	}
-// 	client->set_channel(NULL);
-// 	if (client == _admin)
-//     {
-//         _admin = *(_clients.begin());
-
-//         std::string message = client->getNickname() + " is now the admin of the channel ";
-//     }
-// }
-
-void   Server::kick(Client* client, Client* target, const std::string& reason)
+void Channel::broadcast(const std::string& message, Client* exclude)
 {
-	// Channel *obj;
-	std::cout << client->getNickname() << " " << " kicked " << target->getNickname() << " for reason of : " << reason;
-	// obj->removeClient(target);
-	std::string message = client->getNickname() + " kicked " + target->getNickname() + " from channel ";
-	std::cout << message << std::endl;
+    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        if (*it != exclude)
+        {
+            (*it)->write(message);
+        }
+    }
 }
+
+std::vector<std::string> Channel::split(const std::string& str, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+
+    while (std::getline(ss, token, delimiter))
+    {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
+
+void Channel::removeClient(Client* client)
+{
+    std::vector<Client*>::iterator it = std::find(_clients.begin(), _clients.end(), client);
+    if (it != _clients.end())
+    {
+        _clients.erase(it);
+
+        // Correct std::remove usage
+        clientFds.erase(std::remove(clientFds.begin(), clientFds.end(), client->getFd()), clientFds.end());
+        
+        client->setChannel(NULL);
+
+        if (client == _admin && !_clients.empty())
+        {
+            _admin = _clients.front();
+            broadcast(_admin->getNickname() + " is now the admin of the channel.");
+        }
+    }
+}
+
+
+void Channel::setAdmin(Client* admin) { _admin = admin; }
+
+Client* Channel::getAdmin() const { return _admin; }

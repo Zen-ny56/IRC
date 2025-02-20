@@ -122,6 +122,32 @@ void Server::acceptNewClient()
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
 
+#include <vector>
+
+bool operator!=(const std::vector<Client*>& lhs, const std::vector<Client*>& rhs)
+{
+    if (lhs.size() != rhs.size()) return true;
+
+    for (size_t i = 0; i < lhs.size(); ++i)
+    {
+        if (lhs[i] != rhs[i])  // Comparing pointers (Client*)
+            return true;
+    }
+    return false;
+}
+
+Client *Server::getClientByFd(int fd) const
+{
+    for (std::vector<Client*>::const_iterator it = clients.begin();it != clients.end();it++)
+    {
+        if ((*it)->getFd() == fd)
+        {
+            return *it;  // Return the client if found
+        }
+    }
+    return NULL;  // Return NULL if no client matches the fd
+}
+
 void Server::serSocket()
 {
 	int en = 1;

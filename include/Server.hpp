@@ -75,4 +75,6 @@ class Server //-> class for server
         void  kick(Client* client, Client* target, const std::string& reason);
         void  topicCommand(int fd, std::string request);
         void  inviteCommand(int fd, std::string command);
+        Client *getClientByFd(int fd) const;
 };
+bool operator!=(const std::vector<Client*>& lhs, const std::vector<Client*>& rhs);

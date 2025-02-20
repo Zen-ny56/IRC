@@ -1,45 +1,59 @@
 #include "../../include/Client.hpp"
+#include "../../include/Channel.hpp"
 
-Client::Client() :passAuthen(false), userAuthen(false), nickAuthen(false), userName("default"), realName("default"){}
+Client::Client()
+    : passAuthen(false), userAuthen(false), nickAuthen(false),
+      userName("default"), realName("default"), _channel(NULL), fd(-1), IPadd(""), nickName("") {}
 
-int Client::getFd(){return fd;}
+Client::~Client() {}
 
-void Client::setFd(int fd){this->fd = fd;}
+// Getters
+int Client::getFd() const { return fd; }
 
-void Client::setIpAdd(std::string IPadd){this->IPadd = IPadd;}
+std::string Client::getIPadd() const { return IPadd; }
 
-void Client::setNickname(std::string nickName)
+std::string Client::getNickname() const { return nickName; }
+
+std::string Client::getUserName() const { return userName; }
+
+bool Client::getPassAuthen() const { return passAuthen; }
+
+bool Client::getUserAuthen() const { return userAuthen; }
+
+bool Client::getNickAuthen() const { return nickAuthen; }
+
+Channel* Client::getChannel() const { return _channel; }
+
+// Setters
+void Client::setFd(int fd) { this->fd = fd; }
+
+void Client::setIpAdd(const std::string& IPadd) { this->IPadd = IPadd; }
+
+void Client::setNickname(const std::string& nickName)
 {
     this->nickName = nickName;
     this->nickAuthen = true;
 }
 
-void Client::setUserName(std::string userName, std::string realName)
+void Client::setUserName(const std::string& userName, const std::string& realName)
 {
     this->userName = userName;
     this->realName = realName;
     this->userAuthen = true;
 }
 
-std::string Client::getIPadd(){return this->IPadd;}
+void Client::setPassAuthen(bool value) { this->passAuthen = value; }
 
-void Client::setPassAuthen(){this->passAuthen = true;}
+void Client::setUserAuthen(bool value) { this->userAuthen = value; }
 
-bool Client::getUserAuthen(){return this->userAuthen;}
+void Client::setNickAuthen(bool value) { this->nickAuthen = value; }
 
-bool Client::getNickAuthen(){return this->nickAuthen;}
+void Client::setChannel(Channel* channel) { this->_channel = channel; }
 
-bool Client::getPassAuthen(){return this->passAuthen;}
-
-std::string Client::getNickname(){return this->nickName;}
-
-std::string Client::getUserName(){return this->userName;}
-
-void Client::write(const std::string& message)
+// Utility functions
+void Client::write(const std::string& message) const
 {
-	std::string buff = message + "\r\n";
-	if (send(fd, buff.c_str(), buff.size(), 0) <= -1)
-		throw std::runtime_error("Error occurred while sending");
+    std::string buff = message + "\r\n";
+    if (send(fd, buff.c_str(), buff.size(), 0) <= -1)
+        throw std::runtime_error("Error occurred while sending");
 }
-
-// void 	Client::set_channel(Channel *channel){_channel = channel;}
