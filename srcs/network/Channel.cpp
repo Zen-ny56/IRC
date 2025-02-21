@@ -132,7 +132,5 @@ void Channel::removeClient(Client* client)
     }
 }
 
-
 void Channel::setAdmin(Client* admin) { _admin = admin; }
-
 Client* Channel::getAdmin() const { return _admin; }

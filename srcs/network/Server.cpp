@@ -136,14 +136,12 @@ bool operator!=(const std::vector<Client*>& lhs, const std::vector<Client*>& rhs
     return false;
 }
 
-Client *Server::getClientByFd(int fd) const
+Client *Server::getClientByFd(int fd)
 {
-    for (std::vector<Client*>::const_iterator it = clients.begin();it != clients.end();it++)
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    if (it->getFd() == fd)  // Use `it->` to access the method
     {
-        if ((*it)->getFd() == fd)
-        {
-            return *it;  // Return the client if found
-        }
+        return &(*it);  // Return the address of the client object
     }
     return NULL;  // Return NULL if no client matches the fd
 }

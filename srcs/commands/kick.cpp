@@ -1,3 +1,4 @@
+#include "../../include/Client.hpp"
 #include "../../include/Server.hpp"
 #include "../../include/Channel.hpp"
 
@@ -48,7 +49,7 @@ void Server::kickCommand(int fd, const std::string& message)
     std::string targetNick = tokens[2];
     std::string reason = tokens.size() > 3 ? tokens[3] : "No reason given";
 
-    Client* target = getClientByNick(targetNick);
+    Client* target = getNickname();
     if (!target)
     {
         std::string errormsg = "401 " + targetNick + " :No such nick/channel\r\n";
@@ -56,7 +57,7 @@ void Server::kickCommand(int fd, const std::string& message)
         return;
     }
 
-    Channel* channel = getChannelByName(channelName);
+    Channel* channel = getChannel(channelName);
     if (!channel)
     {
         std::string errormsg = "403 " + channelName + " :No such channel\r\n";

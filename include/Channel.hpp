@@ -9,7 +9,7 @@
 
 class Channel
 {
-    typedef std::vector<Client *>::iterator clientIterate;
+typedef std::vector<Client *>::iterator clientIterate;
 private:
     std::map<char, bool> modes;
     const std::string channelName;
@@ -28,11 +28,12 @@ public:
     Channel(const std::string& channelName, const std::string& key);
     Channel(const Channel& other);
     Channel& operator=(const Channel& copy);
-    ~Channel();
-    void addClient(Client* client);
+    ~Channel();    void addClient(Client* client);
     void setKey(const std::string& key);
     void setMax(int max);
     bool getInviteOnly() const;
+    Channel* getChannel();
+    std::string getNickname(void) const;
     std::string getKey() const;
     int getMax() const;
     bool isFull() const;

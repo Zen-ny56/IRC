@@ -12,8 +12,6 @@ int Client::getFd() const { return fd; }
 
 std::string Client::getIPadd() const { return IPadd; }
 
-std::string Client::getNickname() const { return nickName; }
-
 std::string Client::getUserName() const { return userName; }
 
 bool Client::getPassAuthen() const { return passAuthen; }
@@ -34,6 +32,8 @@ void Client::setNickname(const std::string& nickName)
     this->nickName = nickName;
     this->nickAuthen = true;
 }
+
+std::string Client::getNickname() const {return this->nickName; }
 
 void Client::setUserName(const std::string& userName, const std::string& realName)
 {
