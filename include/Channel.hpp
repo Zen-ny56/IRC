@@ -51,5 +51,4 @@ public:
     void removeClient(Client* client);
     void setAdmin(Client* admin);
     Client* getAdmin() const;
-    std::vector<std::string> split(const std::string& str, char delimiter);
 };

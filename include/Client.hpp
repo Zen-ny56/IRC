@@ -29,7 +29,7 @@ public:
     // Getters
     int getFd() const;
     std::string getIPadd() const;
-    std::string s6_addr32(std::string targetNick);
+    // std::string s6_addr32(std::string targetNick);
     std::string getUserName() const;
     bool getPassAuthen() const;
     bool getUserAuthen() const;
@@ -44,7 +44,7 @@ public:
     void setUserAuthen(bool value = true);
     void setNickAuthen(bool value = true);
     void setChannel(Channel* channel);
-    std::string getNickname() const;
+    std::string ClientNickname() const;
     // Utility functions
     void write(const std::string& message) const;
 };

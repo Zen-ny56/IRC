@@ -6,11 +6,29 @@ void Server::sendCapabilities(int fd)
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
 }
 
+
+std::vector<Client>::iterator Server::relayClient(int fd)
+{
+    // Iterate over the vector of clients
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+        // If the client fd matches, return the iterator
+        if (it->getFd() == fd)
+        {
+            return it; // Return the iterator pointing to the matching client
+        }
+    }
+
+    // If no matching client was found, return clients.end() (iterator pointing past the last element)
+    return clients.end();
+}
+
+
 void Server::validatePassword(int fd, const std::string& message)
 {
 	if (message.rfind("PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
-		std::vector<Client>::iterator it = getClient(fd);
+		std::vector<Client>::iterator it = relayClient(fd);
 		if (it == clients.end())
 			throw std::runtime_error("No client was found\n");
 		Client& client = (*this)[it];
@@ -49,7 +67,7 @@ void Server::processNickUser(int fd, const std::string& message)
 	// NICK command
 	if (message.rfind("NICK ", 0) == 0)
 	{
-		std::vector<Client>::iterator it = getClient(fd);
+		std::vector<Client>::iterator it = relayClient(fd);
 		if (it == clients.end())
 			throw  std::runtime_error("Client was not found\n");
 		Client& client = (*this)[it];
@@ -78,12 +96,12 @@ void Server::processNickUser(int fd, const std::string& message)
 		}
 		// Update client's nickname
 		// Client& client = getClient(fd);
-		std::string oldNickname = client.getNickname();
+		std::string oldNickname = client.ClientNickname() ;
 		if (!oldNickname.empty())
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
 		client.setNickname(nickname);
 		nicknameMap[nickname] = fd; // Add the new nickname to the map
-		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() +  "\r\n" + std::string(WHI); // Inform the client of the nickname change
+		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.ClientNickname()  +  "\r\n" + std::string(WHI); // Inform the client of the nickname change
 		send(fd, response.c_str(), response.length(), 0);
 		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	}
@@ -92,7 +110,7 @@ void Server::processNickUser(int fd, const std::string& message)
 void Server::processUser(int fd, const std::string& message)
 {
 	// Split the message into parts
-	std::vector<Client>::iterator it = getClient(fd);
+	std::vector<Client>::iterator it = relayClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
 	Client& client = (*this)[it];
@@ -147,7 +165,7 @@ void Server::processCapReq(int fd, const std::string& message)
 
 void Server::processQuit(int fd, const std::string& reason) 
 {
-    std::string nickname = clients[fd].getNickname();
+    std::string nickname = clients[fd].ClientNickname() ;
 	// Compose the QUIT message
 	std::string quitMessage = ":" + nickname + " QUIT :Quit: " + (reason.empty() ? "" : reason);
 	// Notify all clients sharing channels with the quitting client
@@ -160,7 +178,7 @@ void Server::processQuit(int fd, const std::string& reason)
 
 void Server::processPrivmsg(int fd, const std::string& message)
 {
-	std::vector<Client>::iterator bt = getClient(fd);
+	std::vector<Client>::iterator bt = relayClient(fd);
 	if (bt == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client& sender = (*this)[bt];
@@ -202,7 +220,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		}
 		// Check if the user is banned or not allowed in the channel
 		Channel& channel = it->second;
-		if (!channel.isInChannel(fd) || channel.isBanned(sender.getNickname()))
+		if (!channel.isInChannel(fd) || channel.isBanned(sender.ClientNickname() ))
 		{
 			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
@@ -223,7 +241,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		}
 		Client& recepient = (*this)[ct];
         // Send the private message to the user
-        std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
+        std::string response = ":" + sender.ClientNickname()  + " PRIVMSG " + recepient.ClientNickname()  + " :" + text + "\r\n";
         send(recepient.getFd(), response.c_str(), response.size(), 0);
     } 
 }

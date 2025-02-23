@@ -98,20 +98,6 @@ void Channel::broadcast(const std::string& message, Client* exclude)
     }
 }
 
-std::vector<std::string> Channel::split(const std::string& str, char delimiter)
-{
-    std::vector<std::string> tokens;
-    std::stringstream ss(str);
-    std::string token;
-
-    while (std::getline(ss, token, delimiter))
-    {
-        tokens.push_back(token);
-    }
-
-    return tokens;
-}
-
 void Channel::removeClient(Client* client)
 {
     std::vector<Client*>::iterator it = std::find(_clients.begin(), _clients.end(), client);
@@ -127,7 +113,7 @@ void Channel::removeClient(Client* client)
         if (client == _admin && !_clients.empty())
         {
             _admin = _clients.front();
-            broadcast(_admin->getNickname() + " is now the admin of the channel.");
+            broadcast(_admin->ClientNickname() + " is now the admin of the channel.");
         }
     }
 }

@@ -33,7 +33,7 @@ void Client::setNickname(const std::string& nickName)
     this->nickAuthen = true;
 }
 
-std::string Client::getNickname() const {return this->nickName; }
+std::string Client::ClientNickname() const {return this->nickName; }
 
 void Client::setUserName(const std::string& userName, const std::string& realName)
 {

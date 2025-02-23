@@ -2,6 +2,16 @@
 
 Server::Server(){serSocketFd = -1;}
 
+std::string Server::getNickname(int fd){
+    // Search for the fd in the nicknameMap
+    for (std::map<std::string, int>::const_iterator it = nicknameMap.begin(); it != nicknameMap.end(); ++it) {
+        if (it->second == fd) {  // If the value matches the fd
+            return it->first;  // Return the corresponding nickname (key)
+        }
+    }
+    return NULL; // Return an empty string if no nickname is found for that fd
+}
+
 void Server::clearClients(int fd)
 { 	//-> clear the clients
 	for(size_t i = 0; i < fds.size(); i++){ //-> remove the client from the pollfd
@@ -203,30 +213,20 @@ void Server::serverInit(int port, std::string pass)
 void Server::sendWelcome(int fd, Client& client)
 {
 	// 1. RPL_WELCOME (001)
-	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
+	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.ClientNickname() + " :Welcome to the IRC Network " + client.ClientNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
 
 	// 2. RPL_YOURHOST (002)
-	std::string yourHostMsg = std::string(YEL) + ":" + "ircserv" + " 002 " + client.getNickname() + " :Your host is " + "ircserv" + ", running version 1.0" + "\r\n";
+	std::string yourHostMsg = std::string(YEL) + ":" + "ircserv" + " 002 " + client.ClientNickname() + " :Your host is " + "ircserv" + ", running version 1.0" + "\r\n";
 	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
 
 	// 3. RPL_CREATED (003)
-	std::string createdMsg = std::string(YEL) + ":" + "ircserv" + " 003 " + client.getNickname() + " :This server was created on 01 Jan 2020" + "\r\n";
+	std::string createdMsg = std::string(YEL) + ":" + "ircserv" + " 003 " + client.ClientNickname() + " :This server was created on 01 Jan 2020" + "\r\n";
 	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
 
 	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + client.getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n" + std::string(WHI);
+	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + client.ClientNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n" + std::string(WHI);
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
-}
-
-std::vector<Client>::iterator Server::getClient(int fd)
-{
-	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-	{
-		if (it->getFd() == fd)
-			return it;
-	}
-	return(clients.end());
 }
 
 bool Server::isValidNickname(const std::string& nickname)
@@ -285,7 +285,7 @@ std::vector<Client>::iterator Server::getClientUsingNickname(const std::string& 
 {
 	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
-		std::string clientsNick = it->getNickname();
+		std::string clientsNick = it->ClientNickname();
 		if (clientsNick.compare(nickname) == 0)
 			return it;
 	}

@@ -2,5 +2,7 @@
 
 void Server::topicCommand(int fd, std::string request)
 {
-    std::cout <<fd << request << std::endl;
+    Channel* channel = getClient(fd)->getChannel();
+    channel->setTopic(request);
+    std::cout << channel->getTopic() << request << std::endl;
 }

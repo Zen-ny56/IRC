@@ -57,7 +57,6 @@ class Server //-> class for server
         bool isValidNickname(const std::string& nickname);
         void processUser(int fd, const std::string& message);
         void capEnd(int fd);
-        std::vector<Client>::iterator getClient(int fd);
         void handleChannel(int fd, const std::string& message);
         void processQuit(int fd, const std::string& reason);
         void disconnectClient(int fd);
@@ -76,5 +75,12 @@ class Server //-> class for server
         void  topicCommand(int fd, std::string request);
         void  inviteCommand(int fd, std::string command);
         Client *getClientByFd(int fd);
+        Client* getClient(int fd);
+        std::string getNickname(int fd);
+        Channel* getChannel(const std::string& channelName);
+        std::vector<std::string> split(const std::string& str, char delimiter);
+        std::vector<Client>::iterator relayClient(int fd);
+        void sendChannelTopic(int fd, Client& client, const std::string& channelName, Channel& channel);
+        void sendUserList(int fd, Client& client, const std::string& channelName, Channel& channel);
 };
 bool operator!=(const std::vector<Client*>& lhs, const std::vector<Client*>& rhs);
